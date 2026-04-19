@@ -2,14 +2,14 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">用户组</h1>
-        <p class="page-desc">将联系人分组管理，方便批量发送邮件</p>
+        <h1 class="page-title">{{ $t('groups.title') }}</h1>
+        <p class="page-desc">{{ $t('groups.description') }}</p>
       </div>
-      <button class="btn-dark" @click="openDialog()">+ 添加用户组</button>
+      <button class="btn-dark" @click="openDialog()">{{ $t('groups.addGroup') }}</button>
     </div>
 
     <div v-if="!groups.length" class="empty-state">
-      <p>还没有用户组，点击上方按钮创建</p>
+      <p>{{ $t('groups.emptyState') }}</p>
     </div>
 
     <div v-else class="group-list">
@@ -17,35 +17,35 @@
         <div class="group-top">
           <div>
             <h3>{{ g.name }}</h3>
-            <p class="group-desc">{{ g.description || '暂无描述' }}</p>
+            <p class="group-desc">{{ g.description || $t('groups.noDescription') }}</p>
           </div>
-          <span class="member-badge">{{ g.contact_count }} 人</span>
+          <span class="member-badge">{{ g.contact_count }} {{ $t('groups.people') }}</span>
         </div>
         <div class="group-actions">
-          <button class="btn-ghost" @click="openMembers(g)">管理成员</button>
-          <button class="btn-ghost" @click="openDialog(g)">编辑</button>
-          <button class="btn-ghost danger" @click="handleDelete(g.id)">删除</button>
+          <button class="btn-ghost" @click="openMembers(g)">{{ $t('groups.manageMembers') }}</button>
+          <button class="btn-ghost" @click="openDialog(g)">{{ $t('common.edit') }}</button>
+          <button class="btn-ghost danger" @click="handleDelete(g.id)">{{ $t('common.delete') }}</button>
         </div>
       </div>
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑用户组' : '添加用户组'" width="420px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('groups.editGroup') : $t('groups.addGroup').replace('+ ', '')" width="420px">
       <div class="dialog-form">
-        <div class="field"><label>组名</label><input v-model="form.name" /></div>
-        <div class="field"><label>描述</label><textarea v-model="form.description" rows="3"></textarea></div>
+        <div class="field"><label>{{ $t('groups.groupName') }}</label><input v-model="form.name" /></div>
+        <div class="field"><label>{{ $t('groups.description') }}</label><textarea v-model="form.description" rows="3"></textarea></div>
       </div>
       <template #footer>
-        <button class="btn-ghost" @click="dialogVisible = false">取消</button>
-        <button class="btn-dark" @click="handleSave">保存</button>
+        <button class="btn-ghost" @click="dialogVisible = false">{{ $t('common.cancel') }}</button>
+        <button class="btn-dark" @click="handleSave">{{ $t('common.save') }}</button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="memberVisible" title="管理成员" width="560px">
+    <el-dialog v-model="memberVisible" :title="$t('groups.manageMembers')" width="560px">
       <div class="member-add">
-        <el-select v-model="selectedContacts" multiple placeholder="选择联系人" style="flex:1">
+        <el-select v-model="selectedContacts" multiple :placeholder="$t('groups.selectContacts')" style="flex:1">
           <el-option v-for="c in allContacts" :key="c.id" :label="`${c.name} (${c.email})`" :value="c.id" />
         </el-select>
-        <button class="btn-dark" style="margin-left:10px" @click="addMembers">添加</button>
+        <button class="btn-dark" style="margin-left:10px" @click="addMembers">{{ $t('common.add') }}</button>
       </div>
       <div class="member-list">
         <div v-for="c in (currentGroup?.contacts || [])" :key="c.id" class="member-item">
@@ -53,9 +53,9 @@
             <div class="avatar-sm">{{ c.name.charAt(0) }}</div>
             <div><div class="member-name">{{ c.name }}</div><div class="member-email">{{ c.email }}</div></div>
           </div>
-          <button class="btn-ghost danger" @click="removeMember(c.id)">移除</button>
+          <button class="btn-ghost danger" @click="removeMember(c.id)">{{ $t('groups.remove') }}</button>
         </div>
-        <div v-if="!(currentGroup?.contacts || []).length" class="empty-members">暂无成员</div>
+        <div v-if="!(currentGroup?.contacts || []).length" class="empty-members">{{ $t('groups.noMembers') }}</div>
       </div>
     </el-dialog>
   </div>
@@ -63,9 +63,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+const { t } = useI18n()
+const $t = t
 const groups = ref([])
 const dialogVisible = ref(false)
 const memberVisible = ref(false)
@@ -97,17 +100,17 @@ function openDialog(row) {
 async function handleSave() {
   if (isEdit.value) {
     await request.put(`/groups/${editId.value}`, form.value)
-    ElMessage.success('更新成功')
+    ElMessage.success(t('common.updateSuccess') || 'Updated successfully')
   } else {
     await request.post('/groups', form.value)
-    ElMessage.success('添加成功')
+    ElMessage.success(t('common.add') + ' ' + t('common.success') || 'Added successfully')
   }
   dialogVisible.value = false; loadGroups()
 }
 async function handleDelete(id) {
-  await ElMessageBox.confirm('确定删除该用户组？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('groups.deleteConfirm'), t('common.warning'), { type: 'warning' })
   await request.delete(`/groups/${id}`)
-  ElMessage.success('删除成功'); loadGroups()
+  ElMessage.success(t('common.delete') + ' ' + t('common.success') || 'Deleted successfully'); loadGroups()
 }
 async function openMembers(row) {
   currentGroup.value = row; selectedContacts.value = []
@@ -116,13 +119,13 @@ async function openMembers(row) {
 async function addMembers() {
   if (!selectedContacts.value.length) return
   await request.post(`/groups/${currentGroup.value.id}/members`, { contact_ids: selectedContacts.value })
-  ElMessage.success('添加成功'); selectedContacts.value = []
+  ElMessage.success(t('common.add') + ' ' + t('common.success') || 'Added successfully'); selectedContacts.value = []
   await loadGroups()
   currentGroup.value = groups.value.find(g => g.id === currentGroup.value.id)
 }
 async function removeMember(cid) {
   await request.delete(`/groups/${currentGroup.value.id}/members`, { data: { contact_ids: [cid] } })
-  ElMessage.success('移除成功'); await loadGroups()
+  ElMessage.success(t('groups.remove') + ' ' + t('common.success') || 'Removed successfully'); await loadGroups()
   currentGroup.value = groups.value.find(g => g.id === currentGroup.value.id)
 }
 onMounted(loadGroups)

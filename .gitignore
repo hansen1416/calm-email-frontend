@@ -9,13 +9,13 @@ lerna-debug.log*
 
 # Dependencies
 node_modules/
-
+.DS_Store
 # Build output
 dist/
 build/
 .output/
 .nuxt/
-
+dist-ssr
 # Cache
 .cache/
 .temp/
@@ -24,17 +24,20 @@ build/
 .vite/
 .eslintcache
 npm-cache/
-
+coverage
 # Environment files
 .env
 .env.*
 !.env.example
+*.local
 
-# Test coverage
-coverage/
-
+/cypress/videos/
+/cypress/screenshots/
 # TypeScript
 *.tsbuildinfo
+/cypress/videos/
+/cypress/screenshots/
+
 
 # Editor directories and files
 .vscode/*
@@ -46,7 +49,7 @@ coverage/
 *.njsproj
 *.sln
 *.sw?
-
+*.tsbuildinfo
 # OS files
 .DS_Store
 Thumbs.db

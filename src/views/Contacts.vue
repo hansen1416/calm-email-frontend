@@ -2,20 +2,20 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">联系人</h1>
-        <p class="page-desc">管理你的所有联系人信息</p>
+        <h1 class="page-title">{{ $t('contacts.title') }}</h1>
+        <p class="page-desc">{{ $t('contacts.description') }}</p>
       </div>
       <div class="header-actions">
         <div class="search-box">
           <span class="search-icon">🔍</span>
-          <input v-model="keyword" placeholder="搜索联系人..." @input="loadContacts" />
+          <input v-model="keyword" :placeholder="$t('contacts.searchPlaceholder')" @input="loadContacts" />
         </div>
-        <button class="btn-dark" @click="openDialog()">+ 添加联系人</button>
+        <button class="btn-dark" @click="openDialog()">{{ $t('contacts.addContact') }}</button>
       </div>
     </div>
 
     <div v-if="!contacts.length" class="empty-state">
-      <p>还没有联系人，点击上方按钮添加</p>
+      <p>{{ $t('contacts.emptyState') }}</p>
     </div>
 
     <div v-else class="card-grid">
@@ -32,23 +32,23 @@
           <span v-if="c.company">🏢 {{ c.company }}</span>
         </div>
         <div class="card-actions">
-          <button class="btn-ghost" @click="openDialog(c)">编辑</button>
-          <button class="btn-ghost danger" @click="handleDelete(c.id)">删除</button>
+          <button class="btn-ghost" @click="openDialog(c)">{{ $t('common.edit') }}</button>
+          <button class="btn-ghost danger" @click="handleDelete(c.id)">{{ $t('common.delete') }}</button>
         </div>
       </div>
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑联系人' : '添加联系人'" width="460px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('contacts.editContact') : $t('contacts.addContact').replace('+ ', '')" width="460px">
       <div class="dialog-form">
-        <div class="field"><label>姓名</label><input v-model="form.name" /></div>
-        <div class="field"><label>邮箱</label><input v-model="form.email" /></div>
-        <div class="field"><label>电话</label><input v-model="form.phone" /></div>
-        <div class="field"><label>公司</label><input v-model="form.company" /></div>
-        <div class="field"><label>备注</label><textarea v-model="form.notes" rows="3"></textarea></div>
+        <div class="field"><label>{{ $t('contacts.name') }}</label><input v-model="form.name" /></div>
+        <div class="field"><label>{{ $t('common.email') }}</label><input v-model="form.email" /></div>
+        <div class="field"><label>{{ $t('contacts.phone') }}</label><input v-model="form.phone" /></div>
+        <div class="field"><label>{{ $t('contacts.company') }}</label><input v-model="form.company" /></div>
+        <div class="field"><label>{{ $t('contacts.notes') }}</label><textarea v-model="form.notes" rows="3"></textarea></div>
       </div>
       <template #footer>
-        <button class="btn-ghost" @click="dialogVisible = false">取消</button>
-        <button class="btn-dark" @click="handleSave">保存</button>
+        <button class="btn-ghost" @click="dialogVisible = false">{{ $t('common.cancel') }}</button>
+        <button class="btn-dark" @click="handleSave">{{ $t('common.save') }}</button>
       </template>
     </el-dialog>
   </div>
@@ -56,9 +56,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
 
+const { t } = useI18n()
+const $t = t
 const contacts = ref([])
 const keyword = ref('')
 const dialogVisible = ref(false)
@@ -87,19 +90,19 @@ function openDialog(row) {
 async function handleSave() {
   if (isEdit.value) {
     await request.put(`/contacts/${editId.value}`, form.value)
-    ElMessage.success('更新成功')
+    ElMessage.success(t('common.updateSuccess') || 'Updated successfully')
   } else {
     await request.post('/contacts', form.value)
-    ElMessage.success('添加成功')
+    ElMessage.success(t('common.add') + ' ' + t('common.success') || 'Added successfully')
   }
   dialogVisible.value = false
   loadContacts()
 }
 
 async function handleDelete(id) {
-  await ElMessageBox.confirm('确定删除该联系人？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('contacts.deleteConfirm'), t('common.warning'), { type: 'warning' })
   await request.delete(`/contacts/${id}`)
-  ElMessage.success('删除成功')
+  ElMessage.success(t('common.delete') + ' ' + t('common.success') || 'Deleted successfully')
   loadContacts()
 }
 

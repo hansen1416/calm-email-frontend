@@ -1,30 +1,39 @@
 <template>
   <div class="layout">
     <aside class="sidebar">
-      <div class="sidebar-logo">
-        <span class="logo-icon">✉</span>
-        <span class="logo-text">Mail Flow</span>
+      <div class="sidebar-header">
+        <div class="sidebar-logo">
+          <span class="logo-icon">✉</span>
+          <span class="logo-text">{{ $t('common.appName') }}</span>
+        </div>
+        <LocaleSwitcher />
       </div>
       <nav class="nav-list">
         <router-link to="/contacts" class="nav-item" :class="{ active: route.path === '/contacts' }">
-          <span class="nav-icon">👤</span>联系人
+          <span class="nav-icon">👤</span>{{ $t('navigation.contacts') }}
         </router-link>
         <router-link to="/groups" class="nav-item" :class="{ active: route.path === '/groups' }">
-          <span class="nav-icon">👥</span>用户组
+          <span class="nav-icon">👥</span>{{ $t('navigation.groups') }}
         </router-link>
         <router-link to="/templates" class="nav-item" :class="{ active: route.path === '/templates' }">
-          <span class="nav-icon">📄</span>邮件模板
+          <span class="nav-icon">📄</span>{{ $t('navigation.templates') }}
         </router-link>
         <router-link to="/send-email" class="nav-item" :class="{ active: route.path === '/send-email' }">
-          <span class="nav-icon">📨</span>发送邮件
+          <span class="nav-icon">📨</span>{{ $t('navigation.sendEmail') }}
         </router-link>
-        <router-link to="/workflow" class="nav-item" :class="{ active: route.path === '/workflow' }">
-          <span class="nav-icon">🔗</span>节点发送
-        </router-link>
+      <router-link to="/workflow" class="nav-item" :class="{ active: route.path === '/workflow' }">
+        <span class="nav-icon">🔗</span>{{ $t('navigation.workflow') }}
+      </router-link>
+      <router-link to="/instances" class="nav-item" :class="{ active: route.path === '/instances' }">
+        <span class="nav-icon">📋</span>{{ $t('navigation.instances') }}
+      </router-link>
+      <router-link to="/events" class="nav-item" :class="{ active: route.path === '/events' }">
+        <span class="nav-icon">📊</span>{{ $t('navigation.events') }}
+      </router-link>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info">{{ userStore.username }}</div>
-        <button class="btn-logout" @click="handleLogout">退出登录</button>
+        <button class="btn-logout" @click="handleLogout">{{ $t('common.logout') }}</button>
       </div>
     </aside>
     <main class="main-content">
@@ -36,10 +45,14 @@
 <script setup>
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from 'vue-i18n'
+import LocaleSwitcher from '@/components/LocaleSwitcher.vue'
 
 const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
+const { t } = useI18n()
+const $t = t
 
 function handleLogout() {
   userStore.logout()
@@ -55,14 +68,20 @@ function handleLogout() {
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 24px 0;
+  padding: 0;
+}
+.sidebar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 24px 16px;
+  border-bottom: 1px solid var(--border);
+  gap: 10px;
 }
 .sidebar-logo {
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 0 24px 28px;
-  border-bottom: 1px solid var(--border);
 }
 .logo-icon { font-size: 22px; }
 .logo-text { font-size: 18px; font-weight: 600; color: var(--text); letter-spacing: -0.5px; }

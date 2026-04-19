@@ -16,6 +16,8 @@ export default defineConfig({
     },
   },
   server: {
+    host: '0.0.0.0', // 监听所有IP地址
+    port: 5173,      // 指定端口号
     proxy: {
       '/api': {
         target: 'http://127.0.0.1:8080',

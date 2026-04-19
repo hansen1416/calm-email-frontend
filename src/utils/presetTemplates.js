@@ -1,6 +1,6 @@
 export const presetTemplates = [
   {
-    name: '欢迎邮件',
+    key: 'welcome',
     subject: '欢迎加入我们',
     thumbnail: '👋',
     body: `<div style="max-width:600px;margin:0 auto;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a">
@@ -19,7 +19,7 @@ export const presetTemplates = [
 </div>`
   },
   {
-    name: '促销活动',
+    key: 'promotion',
     subject: '限时特惠，不容错过',
     thumbnail: '🎉',
     body: `<div style="max-width:600px;margin:0 auto;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a">
@@ -29,7 +29,7 @@ export const presetTemplates = [
   </div>
   <div style="background:#fff;padding:32px;border:1px solid #e8e6e1;border-top:none;border-radius:0 0 12px 12px">
     <p style="font-size:16px;line-height:1.8;color:#333">亲爱的用户，</p>
-    <p style="font-size:16px;line-height:1.8;color:#333;margin-top:12px">我们��你准备了一份特别优惠！活动时间有限，抓紧行动吧。</p>
+    <p style="font-size:16px;line-height:1.8;color:#333;margin-top:12px">我们为你准备了一份特别优惠！活动时间有限，抓紧行动吧。</p>
     <div style="background:#faf9f7;border-radius:8px;padding:20px;margin:24px 0;text-align:center">
       <p style="font-size:14px;color:#6b6b6b;margin:0">使用优惠码</p>
       <p style="font-size:28px;font-weight:700;color:#e8735a;margin:8px 0;letter-spacing:2px">SAVE50</p>
@@ -42,7 +42,7 @@ export const presetTemplates = [
 </div>`
   },
   {
-    name: '月度通讯',
+    key: 'newsletter',
     subject: '本月精选内容',
     thumbnail: '📬',
     body: `<div style="max-width:600px;margin:0 auto;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a">
@@ -69,7 +69,7 @@ export const presetTemplates = [
 </div>`
   },
   {
-    name: '感谢邮件',
+    key: 'thankYou',
     subject: '感谢你的支持',
     thumbnail: '💝',
     body: `<div style="max-width:600px;margin:0 auto;font-family:'Helvetica Neue',Arial,sans-serif;color:#1a1a1a">

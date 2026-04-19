@@ -2,45 +2,45 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">发送邮件</h1>
-        <p class="page-desc">选择模板和收件人，一键发送</p>
+        <h1 class="page-title">{{ $t('sendEmail.title') }}</h1>
+        <p class="page-desc">{{ $t('sendEmail.description') }}</p>
       </div>
     </div>
 
     <div class="send-card">
       <div class="send-section">
-        <label>选择邮件模板</label>
-        <el-select v-model="form.template_id" placeholder="请选择邮件模板" style="width:100%" size="large">
+        <label>{{ $t('sendEmail.selectTemplate') }}</label>
+        <el-select v-model="form.template_id" :placeholder="$t('sendEmail.selectTemplate')" style="width:100%" size="large">
           <el-option v-for="t in templates" :key="t.id" :label="`${t.name} — ${t.subject}`" :value="t.id" />
         </el-select>
       </div>
 
       <div class="send-section">
-        <label>选择联系人</label>
-        <el-select v-model="form.contact_ids" multiple placeholder="选择联系人（可多选）" style="width:100%" size="large">
+        <label>{{ $t('sendEmail.selectContacts') }}</label>
+        <el-select v-model="form.contact_ids" multiple :placeholder="$t('sendEmail.selectContacts') + ' (multiple)'" style="width:100%" size="large">
           <el-option v-for="c in contacts" :key="c.id" :label="`${c.name} (${c.email})`" :value="c.id" />
         </el-select>
       </div>
 
       <div class="send-section">
-        <label>选择用户组</label>
-        <el-select v-model="form.group_ids" multiple placeholder="选择用户组（可多选）" style="width:100%" size="large">
-          <el-option v-for="g in groups" :key="g.id" :label="`${g.name} (${g.contact_count}人)`" :value="g.id" />
+        <label>{{ $t('sendEmail.selectGroups') }}</label>
+        <el-select v-model="form.group_ids" multiple :placeholder="$t('sendEmail.selectGroups') + ' (multiple)'" style="width:100%" size="large">
+          <el-option v-for="g in groups" :key="g.id" :label="`${g.name} (${g.contact_count}${$t('groups.people')})`" :value="g.id" />
         </el-select>
       </div>
 
       <button class="btn-send" @click="handleSend" :disabled="sending">
-        {{ sending ? '发送中...' : '📨 发送邮件' }}
+        {{ sending ? $t('sendEmail.sending') : $t('sendEmail.sendButton') }}
       </button>
     </div>
 
     <div v-if="results.length" class="result-card">
-      <h3>发送结果</h3>
+      <h3>{{ $t('sendEmail.results') }}</h3>
       <div class="result-list">
         <div v-for="(r, i) in results" :key="i" class="result-item">
           <span class="result-email">{{ r.email }}</span>
           <span :class="['result-tag', r.status === 'sent' ? 'success' : 'fail']">
-            {{ r.status === 'sent' ? '✓ 成功' : '✗ 失败' }}
+            {{ r.status === 'sent' ? $t('workflow.statusSuccess') : $t('workflow.statusFail') }}
           </span>
         </div>
       </div>
@@ -50,8 +50,12 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 import { ElMessage } from 'element-plus'
+
+const { t } = useI18n()
+const $t = t
 
 const templates = ref([])
 const contacts = ref([])
@@ -72,15 +76,15 @@ async function loadData() {
 }
 
 async function handleSend() {
-  if (!form.value.template_id) { ElMessage.warning('请选择邮件模板'); return }
+  if (!form.value.template_id) { ElMessage.warning(t('sendEmail.selectTemplateMsg')); return }
   if (!form.value.contact_ids.length && !form.value.group_ids.length) {
-    ElMessage.warning('请至少选择一个联系人或用户组'); return
+    ElMessage.warning(t('sendEmail.selectRecipientMsg')); return
   }
   sending.value = true
   try {
     const { data } = await request.post('/email/send', form.value)
     results.value = data.results
-    ElMessage.success('发送完成')
+    ElMessage.success(t('sendEmail.completed'))
   } catch (e) { /* handled */ }
   sending.value = false
 }

@@ -3,28 +3,28 @@
     <div class="login-card">
       <div class="logo-area">
         <div class="logo-icon">✉</div>
-        <h1>Mail Flow</h1>
-        <p class="subtitle">简约高效的邮件管理平台</p>
+        <h1>{{ $t('common.appName') }}</h1>
+        <p class="subtitle">{{ $t('common.subtitle') }}</p>
       </div>
       <div class="form-area">
-        <h2>{{ isRegister ? '创建账号' : '欢迎回来' }}</h2>
+        <h2>{{ isRegister ? $t('common.createAccount') : $t('common.welcomeBack') }}</h2>
         <div class="field">
-          <label>用户名</label>
-          <input v-model="form.username" placeholder="请输入用户名" />
+          <label>{{ $t('common.username') }}</label>
+          <input v-model="form.username" :placeholder="`Please enter ${$t('common.username')}`" />
         </div>
         <div v-if="isRegister" class="field">
-          <label>邮箱</label>
-          <input v-model="form.email" placeholder="请输入邮箱" />
+          <label>{{ $t('common.email') }}</label>
+          <input v-model="form.email" :placeholder="`Please enter ${$t('common.email')}`" />
         </div>
         <div class="field">
-          <label>密码</label>
-          <input v-model="form.password" type="password" placeholder="请输入密码" />
+          <label>{{ $t('common.password') }}</label>
+          <input v-model="form.password" type="password" :placeholder="`Please enter ${$t('common.password')}`" />
         </div>
         <button class="btn-primary" @click="handleSubmit">
-          {{ isRegister ? '注册' : '登录' }}
+          {{ isRegister ? $t('common.register') : $t('common.login') }}
         </button>
         <p class="switch-link" @click="isRegister = !isRegister">
-          {{ isRegister ? '已有账号？去登录' : '没有账号？去注册' }}
+          {{ isRegister ? $t('common.haveAccount') : $t('common.noAccount') }}
         </p>
       </div>
     </div>
@@ -35,10 +35,14 @@
 import { ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useUserStore } from '@/stores/user'
+import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
 const userStore = useUserStore()
+const { t } = useI18n()
+const $t = t
+
 const isRegister = ref(false)
 const form = ref({ username: '', password: '', email: '' })
 
@@ -46,7 +50,7 @@ async function handleSubmit() {
   try {
     if (isRegister.value) {
       await userStore.register(form.value)
-      ElMessage.success('注册成功，请登录')
+      ElMessage.success(t('common.register') + ' ' + t('common.success') + ', ' + t('common.login'))
       isRegister.value = false
     } else {
       await userStore.login(form.value)

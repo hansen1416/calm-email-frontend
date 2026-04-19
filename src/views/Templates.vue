@@ -2,14 +2,14 @@
   <div class="page">
     <div class="page-header">
       <div>
-        <h1 class="page-title">邮件模板</h1>
-        <p class="page-desc">创建和管理你的邮件模板</p>
+        <h1 class="page-title">{{ $t('templates.title') }}</h1>
+        <p class="page-desc">{{ $t('templates.description') }}</p>
       </div>
-      <button class="btn-dark" @click="openDialog()">+ 添加模板</button>
+      <button class="btn-dark" @click="openDialog()">{{ $t('templates.addTemplate') }}</button>
     </div>
 
     <div v-if="!templates.length" class="empty-state">
-      <p>还没有邮件模板，点击上方按钮创建</p>
+      <p>{{ $t('templates.emptyState') }}</p>
     </div>
 
     <div v-else class="tpl-grid">
@@ -21,49 +21,49 @@
         <p class="tpl-subject">{{ t.subject }}</p>
         <p class="tpl-time">{{ t.created_at }}</p>
         <div class="tpl-actions">
-          <button class="btn-ghost" @click="preview(t)">预览</button>
-          <button class="btn-ghost" @click="openDialog(t)">编辑</button>
-          <button class="btn-ghost danger" @click="handleDelete(t.id)">删除</button>
+          <button class="btn-ghost" @click="preview(t)">{{ $t('common.preview') }}</button>
+          <button class="btn-ghost" @click="openDialog(t)">{{ $t('common.edit') }}</button>
+          <button class="btn-ghost danger" @click="handleDelete(t.id)">{{ $t('common.delete') }}</button>
         </div>
       </div>
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? '编辑模板' : '添加模板'" width="700px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('templates.editTemplate') : $t('templates.addTemplate').replace('+ ', '')" width="700px">
       <!-- Preset selector -->
       <div v-if="!isEdit" class="preset-section">
-        <label class="section-label">从预设模板开始</label>
+        <label class="section-label">{{ $t('templates.startFromPreset') }}</label>
         <div class="preset-grid">
           <div v-for="(p, i) in presets" :key="i" class="preset-item"
             :class="{ selected: selectedPreset === i }" @click="applyPreset(i)">
             <span class="preset-thumb">{{ p.thumbnail }}</span>
-            <span class="preset-name">{{ p.name }}</span>
+            <span class="preset-name">{{ presetNames[p.key] }}</span>
           </div>
           <div class="preset-item" :class="{ selected: selectedPreset === -1 }" @click="clearPreset()">
             <span class="preset-thumb">✏️</span>
-            <span class="preset-name">自定义</span>
+            <span class="preset-name">{{ $t('templates.custom') }}</span>
           </div>
         </div>
       </div>
 
       <div class="dialog-form">
-        <div class="field"><label>模板名称</label><input v-model="form.name" /></div>
-        <div class="field"><label>邮件主题</label><input v-model="form.subject" /></div>
+        <div class="field"><label>{{ $t('templates.templateName') }}</label><input v-model="form.name" /></div>
+        <div class="field"><label>{{ $t('templates.emailSubject') }}</label><input v-model="form.subject" /></div>
         <div class="field">
-          <label>邮件内容 <span class="hint">支持 HTML 格式</span></label>
+          <label>{{ $t('templates.emailBody') }} <span class="hint">{{ $t('templates.htmlSupport') }}</span></label>
           <textarea v-model="form.body" rows="12"></textarea>
         </div>
         <div v-if="form.body" class="live-preview">
-          <label class="section-label">实时预览</label>
+          <label class="section-label">{{ $t('templates.livePreview') }}</label>
           <div class="preview-frame" v-html="form.body"></div>
         </div>
       </div>
       <template #footer>
-        <button class="btn-ghost" @click="dialogVisible = false">取消</button>
-        <button class="btn-dark" @click="handleSave">保存</button>
+        <button class="btn-ghost" @click="dialogVisible = false">{{ $t('common.cancel') }}</button>
+        <button class="btn-dark" @click="handleSave">{{ $t('common.save') }}</button>
       </template>
     </el-dialog>
 
-    <el-dialog v-model="previewVisible" title="模板预览" width="660px">
+    <el-dialog v-model="previewVisible" :title="$t('templates.templatePreview')" width="660px">
       <div class="preview-subject">{{ previewData.subject }}</div>
       <div class="preview-body" v-html="previewData.body"></div>
     </el-dialog>
@@ -71,10 +71,22 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { presetTemplates } from '@/utils/presetTemplates'
+
+const { t } = useI18n()
+const $t = t
+
+// 预设模板名称（支持国际化）
+const presetNames = computed(() => ({
+  welcome: t('templates.presets.welcome'),
+  promotion: t('templates.presets.promotion'),
+  newsletter: t('templates.presets.newsletter'),
+  thankYou: t('templates.presets.thankYou')
+}))
 
 const templates = ref([])
 const dialogVisible = ref(false)
@@ -93,7 +105,8 @@ async function loadTemplates() {
 function applyPreset(i) {
   selectedPreset.value = i
   const p = presets[i]
-  form.value = { name: p.name, subject: p.subject, body: p.body }
+  const nameKey = p.key
+  form.value = { name: presetNames.value[nameKey], subject: p.subject, body: p.body }
 }
 function clearPreset() {
   selectedPreset.value = -1
@@ -117,17 +130,17 @@ function preview(row) {
 async function handleSave() {
   if (isEdit.value) {
     await request.put(`/templates/${editId.value}`, form.value)
-    ElMessage.success('更新成功')
+    ElMessage.success(t('common.updateSuccess') || 'Updated successfully')
   } else {
     await request.post('/templates', form.value)
-    ElMessage.success('添加成功')
+    ElMessage.success(t('common.add') + ' ' + t('common.success') || 'Added successfully')
   }
   dialogVisible.value = false; loadTemplates()
 }
 async function handleDelete(id) {
-  await ElMessageBox.confirm('确定删除该模板？', '提示', { type: 'warning' })
+  await ElMessageBox.confirm(t('templates.deleteConfirm'), t('common.warning'), { type: 'warning' })
   await request.delete(`/templates/${id}`)
-  ElMessage.success('删除成功'); loadTemplates()
+  ElMessage.success(t('common.delete') + ' ' + t('common.success') || 'Deleted successfully'); loadTemplates()
 }
 onMounted(loadTemplates)
 </script>
