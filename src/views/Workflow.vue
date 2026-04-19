@@ -982,8 +982,12 @@ function addEdgeBetweenNodes(sourceNodeId, sourceAnchor, targetNodeId) {
 }
 
 function handleAddNode(command) {
-  // 检查是否有选中锚点
-  if (!selectedNodeId.value || !selectedAnchor.value) {
+  // 检查画布中是否已有节点
+  const hasExistingNodes = graph && graph.getNodes().length > 0
+  
+  // 如果已有节点，需要选中锚点才能添加新节点
+  // 如果是第一个节点（画布为空），不需要选中锚点
+  if (hasExistingNodes && (!selectedNodeId.value || !selectedAnchor.value)) {
     ElMessage.warning(t('workflow.selectAnchorFirst') || '请先选择一个节点的锚点来连接新节点')
     return
   }
