@@ -617,13 +617,7 @@ function initGraph() {
             line: { stroke: '#666', strokeWidth: 2, targetMarker: { name: 'classic', size: 8 } }
           },
           zIndex: 0,
-          connector: { name: 'rounded' },
-          tools: [
-            {
-              name: 'button-remove',
-              args: { distance: -40 }
-            }
-          ]
+          connector: { name: 'rounded' }
         })
       }
     },
@@ -974,7 +968,6 @@ function addEdgeBetweenNodes(sourceNodeId, sourceAnchor, targetNodeId) {
       router: { name: 'manhattan', args: { padding: 20 } },
       connector: { name: 'rounded' }
     })
-    edge.addTools([{ name: 'button-remove', args: { distance: -40 } }])
     ElMessage.success('已连接')
   } catch (err) {
     ElMessage.error('连接失败: ' + err.message)
@@ -1358,7 +1351,7 @@ async function doLoadWorkflow(wf) {
   })
 
   flow.edges.forEach(e => {
-    const edge = graph.addEdge({
+    graph.addEdge({
       source: { cell: e.source, port: e.sourcePort },
       target: { cell: e.target, port: e.targetPort },
       attrs: {
@@ -1367,12 +1360,6 @@ async function doLoadWorkflow(wf) {
       router: { name: 'manhattan', args: { padding: 20 } },
       connector: { name: 'rounded' }
     })
-    edge.addTools([
-      {
-        name: 'button-remove',
-        args: { distance: -40 }
-      }
-    ])
   })
   setTimeout(resizeCanvas, 100)
 }

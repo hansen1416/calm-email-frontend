@@ -24,7 +24,7 @@ export const useUserStore = defineStore('user', () => {
     try {
       await request.post('/auth/logout')
     } catch (e) {
-      // ºöÂÔ´íÎó
+      // å¿½ç•¥é”™è¯¯
     }
     token.value = ''
     refreshToken.value = ''
