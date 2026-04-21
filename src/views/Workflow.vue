@@ -290,11 +290,11 @@
           <el-date-picker v-model="workflowForm.start_time" type="datetime" style="width: 100%" />
         </el-form-item>
       </el-form>
-      <template #footer>
-        <button class="btn-ghost" @click="showWorkflowDialog = false">{{ $t('common.cancel') }}</button>
-        <button class="btn-dark" @click="saveWorkflowProperties">{{ $t('common.save') }}</button>
-      </template>
-    </el-dialog>
+  <template #footer>
+    <button class="btn-ghost" @click="closeWorkflowDialog">{{ $t('common.cancel') }}</button>
+    <button class="btn-dark" @click="saveWorkflowProperties">{{ $t('common.save') }}</button>
+  </template>
+</el-dialog>
 
 <div v-if="results.length" class="result-card">
   <h3>{{ $t('workflow.results') }}</h3>
@@ -346,6 +346,9 @@ const currentWfId = ref(null)
 const isDirty = ref(false)
 const showAddNode = ref(false)
 const results = ref([])
+
+// 从列表编辑属性时存储的目标工作流ID（不改变currentWfId，避免影响画布保存）
+const editingPropertyWfId = ref(null)
 
 // 统一弹窗状态
 const nodeTypeStep = ref('select')
@@ -401,6 +404,9 @@ function handleWorkflowItemDblClick(wf) {
 
 // 从列表打开编辑属性弹窗
 function openEditProperties(wf) {
+  // 记录要编辑属性的工作流ID到独立变量
+  // 不使用 currentWfId，避免影响画布保存逻辑
+  editingPropertyWfId.value = wf.id
   workflowForm.value = {
     name: wf.name,
     status: wf.status || 'inactive',
@@ -1252,19 +1258,26 @@ async function saveWorkflow() {
   const flowData = { nodes, edges }
 
   try {
+    // 画布保存：只保存名称和流程数据，不修改属性（status, execution_mode, start_time）
+    // 属性编辑由 saveWorkflowProperties 处理
     const wfData = {
       name: workflowName.value,
-      flow_data: flowData,
-      status: workflowForm.value.status,
-      execution_mode: workflowForm.value.execution_mode,
-      start_time: workflowForm.value.start_time || null
+      flow_data: flowData
+      // 注意：不传递 status, execution_mode, start_time，避免覆盖属性
     }
     if (currentWfId.value) {
       await request.put(`/workflow/${currentWfId.value}`, wfData)
       isDirty.value = false
       ElMessage.success(t('workflow.updateSuccess'))
     } else {
-      const { data } = await request.post('/workflow', wfData)
+      // 新建工作流时使用表单中的属性作为默认值
+      const newWfData = {
+        ...wfData,
+        status: workflowForm.value.status || 'inactive',
+        execution_mode: workflowForm.value.execution_mode || 'manual',
+        start_time: workflowForm.value.start_time || null
+      }
+      const { data } = await request.post('/workflow', newWfData)
       currentWfId.value = data.id
       isDirty.value = false
       workflowForm.value = {
@@ -1383,10 +1396,43 @@ async function deleteWorkflow(id) {
   ElMessage.success(t('workflow.deleteSuccess'))
 }
 
-// 保存工作流属性
+// 关闭工作流属性弹窗
+function closeWorkflowDialog() {
+  editingPropertyWfId.value = null // 清空临时标记
+  showWorkflowDialog.value = false
+}
+
+// 保存工作流属性（从列表齿轮编辑）
 async function saveWorkflowProperties() {
-  workflowName.value = workflowForm.value.name
-  await saveWorkflow()
+  // 必须使用 editingPropertyWfId 来判断是从列表编辑属性
+  // currentWfId 是画布当前加载的工作流，可能与编辑目标不同
+  if (editingPropertyWfId.value) {
+    // 只发送属性数据，不发送 flow_data，避免覆盖节点数据
+    const wfData = {
+      name: workflowForm.value.name,
+      status: workflowForm.value.status,
+      execution_mode: workflowForm.value.execution_mode,
+      start_time: workflowForm.value.start_time || null
+      // 注意：不传递 flow_data，后端会保持原有节点数据
+    }
+    try {
+      await request.put(`/workflow/${editingPropertyWfId.value}`, wfData)
+      ElMessage.success(t('workflow.updateSuccess') || '更新成功')
+      // 如果当前画布显示的是同一个工作流，同步更新标题
+      if (currentWfId.value === editingPropertyWfId.value) {
+        workflowName.value = workflowForm.value.name
+      }
+      loadWorkflows() // 刷新列表
+    } catch (e) {
+      ElMessage.error(t('workflow.updateFailed') || '更新失败')
+    }
+    editingPropertyWfId.value = null // 清空临时标记
+    showWorkflowDialog.value = false
+    return
+  }
+  // 不应该走到这里，editingPropertyWfId 必须在 openEditProperties 时设置
+  console.error('editingPropertyWfId is not set')
+  ElMessage.error('保存失败：无法确定目标工作流')
   showWorkflowDialog.value = false
 }
 
@@ -1398,7 +1444,7 @@ async function executeWorkflow() {
   }
 
   try {
-    const { data } = await request.post(`/workflow/${currentWfId.value}/execute`)
+    const { data } = await request.post(`/workflow/${currentWfId.value}/execute`, {})
     results.value = data.results || []
     ElMessage.success(t('workflow.sendSuccess') || 'Sending completed')
   } catch (e) {

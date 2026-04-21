@@ -5,21 +5,25 @@
       <p class="desc">{{ $t('instances.description') }}</p>
     </div>
 
-    <!-- 筛选栏 -->
-    <div class="filters">
-      <el-select v-model="filterStatus" :placeholder="$t('instances.filterByStatus')" clearable style="width: 150px">
-        <el-option :label="$t('instances.allStatuses')" value="" />
-        <el-option :label="$t('instances.pending')" value="pending" />
-        <el-option :label="$t('instances.running')" value="running" />
-        <el-option :label="$t('instances.waitingEvent')" value="waiting_event" />
-        <el-option :label="$t('instances.delayed')" value="delayed" />
-        <el-option :label="$t('instances.completed')" value="completed" />
-        <el-option :label="$t('instances.failed')" value="failed" />
-        <el-option :label="$t('instances.cancelled')" value="cancelled" />
-      </el-select>
-      <el-input v-model="filterWorkflow" :placeholder="$t('instances.searchWorkflow')" clearable style="width: 200px" />
-      <el-input v-model="filterRecipient" :placeholder="$t('instances.searchRecipient')" clearable style="width: 200px" />
-    </div>
+  <!-- 筛选栏 -->
+  <div class="filters">
+    <el-select v-model="filterStatus" :placeholder="$t('instances.filterByStatus')" clearable style="width: 150px">
+      <el-option :label="$t('instances.allStatuses')" value="" />
+      <el-option :label="$t('instances.pending')" value="pending" />
+      <el-option :label="$t('instances.running')" value="running" />
+      <el-option :label="$t('instances.waitingEvent')" value="waiting_event" />
+      <el-option :label="$t('instances.delayed')" value="delayed" />
+      <el-option :label="$t('instances.completed')" value="completed" />
+      <el-option :label="$t('instances.failed')" value="failed" />
+      <el-option :label="$t('instances.cancelled')" value="cancelled" />
+    </el-select>
+    <el-input v-model="filterWorkflow" :placeholder="$t('instances.searchWorkflow')" clearable style="width: 200px" />
+    <el-input v-model="filterRecipient" :placeholder="$t('instances.searchRecipient')" clearable style="width: 200px" />
+    <el-button type="primary" @click="refreshInstances" :loading="loading">
+      <el-icon><Refresh /></el-icon>
+      {{ $t('common.refresh') || '刷新' }}
+    </el-button>
+  </div>
 
     <!-- 实例列表 -->
     <el-table :data="instances" v-loading="loading" style="width:100%">
@@ -300,6 +304,12 @@ async function cancelInstance(row) {
       ElMessage.error(e.response?.data?.msg || 'Failed to cancel instance')
     }
   }
+}
+
+// 刷新实例列表
+async function refreshInstances() {
+  await loadInstances(page.value)
+  ElMessage.success('列表已刷新')
 }
 
 watch([filterStatus], () => {

@@ -27,6 +27,10 @@ request.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    // 设置默认 Content-Type 为 application/json
+    if (!config.headers['Content-Type'] && config.method === 'post') {
+      config.headers['Content-Type'] = 'application/json'
+    }
     return config
   },
   error => {
