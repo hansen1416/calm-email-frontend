@@ -153,6 +153,7 @@
     "saveFailed": "Save failed",
     "pleaseSaveFirst": "Please save workflow first",
     "sendFailed": "Send failed",
+    "sendSuccess": "Sending completed",
     "deleteConfirm": "Are you sure you want to delete this workflow?",
     "deleteSuccess": "Deleted successfully",
     "driverType": "Driver Type",
@@ -333,7 +334,10 @@
       "sentTo": "Verification code sent to",
       "hint": "Please enter the 6-digit verification code received in your email",
       "code": "Verification Code",
-      "resend": "Resend"
+      "resend": "Resend",
+      "sending": "Sending verification code...",
+      "sentSuccess": "Verification code sent, please check your email",
+      "sentFailed": "Failed to send verification code, please try again"
     },
     "rules": {
       "emailRequired": "Please enter email address",

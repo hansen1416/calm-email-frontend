@@ -139,6 +139,30 @@
       <div v-if="currentSender" class="verify-info">
         <p>{{ $t('emailSenders.verifyDialog.sentTo') }}: <strong>{{ currentSender.email }}</strong></p>
         <p class="hint">{{ $t('emailSenders.verifyDialog.hint') }}</p>
+        <el-alert
+          v-if="codeSentStatus === 'sending'"
+          :title="$t('emailSenders.verifyDialog.sending') || '正在发送验证码...'"
+          type="info"
+          :closable="false"
+          show-icon
+          class="mt-2"
+        />
+        <el-alert
+          v-if="codeSentStatus === 'success'"
+          :title="$t('emailSenders.verifyDialog.sentSuccess') || '验证码已发送，请查收邮件'"
+          type="success"
+          :closable="true"
+          show-icon
+          class="mt-2"
+        />
+        <el-alert
+          v-if="codeSentStatus === 'error'"
+          :title="$t('emailSenders.verifyDialog.sentFailed') || '验证码发送失败，请重试'"
+          type="error"
+          :closable="true"
+          show-icon
+          class="mt-2"
+        />
       </div>
       <el-form :model="verifyForm" :rules="verifyRules" ref="verifyFormRef">
         <el-form-item :label="$t('emailSenders.verifyDialog.code')" prop="token">
@@ -189,6 +213,7 @@ const verifyDialogVisible = ref(false)
 const verifyFormRef = ref()
 const verifying = ref(false)
 const resending = ref(false)
+const codeSentStatus = ref('') // 'sending' | 'success' | 'error' | ''
 const currentSender = ref(null)
 const verifyForm = reactive({
   token: ''
@@ -238,6 +263,9 @@ const t = (key) => {
     'emailSenders.rules.emailFormat': '邮箱格式不正确',
     'emailSenders.rules.codeRequired': '请输入验证码',
     'emailSenders.rules.codeLength': '验证码为6位数字',
+    'emailSenders.verifyDialog.sending': '正在发送验证码...',
+    'emailSenders.verifyDialog.sentSuccess': '验证码已发送，请查收邮件',
+    'emailSenders.verifyDialog.sentFailed': '验证码发送失败，请重试',
     'common.cancel': '取消',
     'common.submit': '提交',
     'common.verify': '验证'
@@ -307,10 +335,22 @@ const submitAdd = async () => {
 }
 
 // 显示验证对话框
-const showVerifyDialog = (sender) => {
+const showVerifyDialog = async (sender) => {
   currentSender.value = sender
   verifyForm.token = ''
+  codeSentStatus.value = 'sending'
   verifyDialogVisible.value = true
+  
+  // 弹窗打开后自动发送验证码邮件
+  try {
+    const res = await request.post(`/email/senders/${sender.id}/send-code`)
+    codeSentStatus.value = 'success'
+    ElMessage.success(res.data.msg || '验证码已发送，请查收邮件')
+  } catch (error) {
+    codeSentStatus.value = 'error'
+    console.error('Failed to send verification code:', error)
+    ElMessage.error(error.response?.data?.msg || '验证码发送失败，请重试或联系管理员')
+  }
 }
 
 // 提交验证
@@ -339,22 +379,25 @@ const submitVerify = async () => {
 // 重新发送验证码
 const resendCode = async () => {
   resending.value = true
+  codeSentStatus.value = 'sending'
   try {
     const res = await request.post(`/email/senders/${currentSender.value.id}/resend`)
+    codeSentStatus.value = 'success'
     ElMessage.success(res.data.msg || '验证码已重新发送')
   } catch (error) {
+    codeSentStatus.value = 'error'
     console.error('Failed to resend:', error)
     ElMessage.error(error.response?.data?.msg || '发送失败')
   } finally {
     resending.value = false
-      // 刷新列表（在单独的try-catch中，不影响主流程提示）
-      try {
-        await fetchData()
-      } catch (e) {
-        console.error('Failed to refresh list:', e)
-      }
+    // 刷新列表（在单独的try-catch中，不影响主流程提示）
+    try {
+      await fetchData()
+    } catch (e) {
+      console.error('Failed to refresh list:', e)
     }
   }
+}
 
   // 设为默认
 const setDefault = async (sender) => {
@@ -475,24 +518,28 @@ onMounted(() => {
     margin-top: 4px;
   }
 
-  .verify-info {
-    margin-bottom: 20px;
-    padding: 16px;
-    background-color: #f5f7fa;
-    border-radius: 4px;
+.verify-info {
+  margin-bottom: 20px;
+  padding: 16px;
+  background-color: #f5f7fa;
+  border-radius: 4px;
 
-    p {
-      margin: 0 0 8px;
+  p {
+    margin: 0 0 8px;
 
-      &:last-child {
-        margin-bottom: 0;
-      }
-    }
-
-    .hint {
-      color: #666;
-      font-size: 14px;
+    &:last-child {
+      margin-bottom: 0;
     }
   }
+
+  .hint {
+    color: #666;
+    font-size: 14px;
+  }
+
+  .mt-2 {
+    margin-top: 8px;
+  }
+}
 }
 </style>
