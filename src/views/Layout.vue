@@ -30,6 +30,9 @@
       <router-link to="/events" class="nav-item" :class="{ active: route.path === '/events' }">
         <span class="nav-icon">📊</span>{{ $t('navigation.events') }}
       </router-link>
+      <router-link to="/email-senders" class="nav-item" :class="{ active: route.path === '/email-senders' }">
+        <span class="nav-icon">📧</span>{{ $t('navigation.emailSenders') }}
+      </router-link>
       </nav>
       <div class="sidebar-footer">
         <div class="user-info">{{ userStore.username }}</div>

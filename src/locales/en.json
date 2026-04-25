@@ -27,7 +27,9 @@
     "error": "Error",
     "actions": "Actions",
     "view": "View",
-    "refresh": "Refresh"
+    "refresh": "Refresh",
+    "verify": "Verify",
+    "submit": "Submit"
   },
   "navigation": {
     "contacts": "Contacts",
@@ -36,7 +38,8 @@
     "sendEmail": "Send Email",
     "workflow": "Workflow",
     "instances": "Instances",
-    "events": "Events"
+    "events": "Events",
+    "emailSenders": "Email Senders"
   },
   "contacts": {
     "title": "Contacts",
@@ -93,14 +96,20 @@
     "title": "Send Email",
     "description": "Select template and recipients, send with one click",
     "selectTemplate": "Select Email Template",
+    "selectSender": "Select Sender",
     "selectContacts": "Select Contacts",
     "selectGroups": "Select Groups",
     "sendButton": "Send Email",
     "sending": "Sending...",
     "results": "Send Results",
     "selectTemplateMsg": "Please select an email template",
+    "selectSenderMsg": "Please select a sender email",
     "selectRecipientMsg": "Please select at least one contact or group",
-    "completed": "Sending completed"
+    "completed": "Sending completed",
+    "noSenders": "No sender emails configured",
+    "addSender": "Add Sender",
+    "defaultSender": "Default",
+    "quotaHint": "Daily Quota"
   },
   "workflow": {
     "title": "Node Sending",
@@ -277,6 +286,60 @@
       "completed": "Completed",
       "failed": "Failed",
       "cancelled": "Cancelled"
+    }
+  },
+  "emailSenders": {
+    "title": "Email Sender Management",
+    "description": "Manage your sender emails, support binding your own email or using system email",
+    "quota": {
+      "title": "Today's Send Quota",
+      "sent": "Sent",
+      "remaining": "Remaining",
+      "resetAt": "Reset Time"
+    },
+    "list": {
+      "title": "Sender Email List",
+      "add": "Add Email"
+    },
+    "table": {
+      "email": "Email Address",
+      "type": "Type",
+      "status": "Status",
+      "usage": "Usage",
+      "actions": "Actions",
+      "default": "Default"
+    },
+    "type": {
+      "personal": "Personal",
+      "system": "System"
+    },
+    "status": {
+      "pending": "Pending",
+      "verified": "Verified",
+      "failed": "Failed"
+    },
+    "actions": {
+      "verify": "Verify",
+      "setDefault": "Set Default",
+      "delete": "Delete"
+    },
+    "empty": "No sender emails yet, click the button below to add",
+    "addDialog": {
+      "title": "Add Sender Email",
+      "email": "Email Address"
+    },
+    "verifyDialog": {
+      "title": "Verify Email",
+      "sentTo": "Verification code sent to",
+      "hint": "Please enter the 6-digit verification code received in your email",
+      "code": "Verification Code",
+      "resend": "Resend"
+    },
+    "rules": {
+      "emailRequired": "Please enter email address",
+      "emailFormat": "Invalid email format",
+      "codeRequired": "Please enter verification code",
+      "codeLength": "Verification code must be 6 digits"
     }
   }
 }

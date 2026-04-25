@@ -12,9 +12,10 @@ const routes = [
       { path: 'templates', component: () => import('@/views/Templates.vue') },
       { path: 'send-email', component: () => import('@/views/SendEmail.vue') },
   { path: 'workflow', component: () => import('@/views/Workflow.vue') },
-    { path: 'instances', component: () => import('@/views/WorkflowInstances.vue') },
-    { path: 'events', component: () => import('@/views/Events.vue') }
-    ]
+  { path: 'instances', component: () => import('@/views/WorkflowInstances.vue') },
+    { path: 'events', component: () => import('@/views/Events.vue') },
+    { path: 'email-senders', component: () => import('@/views/EmailSenders.vue') }
+  ]
   }
 ]
 
