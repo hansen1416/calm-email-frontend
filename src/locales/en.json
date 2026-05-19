@@ -357,6 +357,7 @@
       "currentPlanBtn": "Current",
       "freePlan": "Free Plan",
       "subscribeBtn": "Subscribe",
+      "switchTo": "Switch to {plan}",
       "notEnabled": "Payment feature is not enabled. Set UPGRADE_FEATURE_ENABLED=true and PAYMENT_STRIPE_ENABLED=true in .env",
       "loading": "Loading plans..."
     },
@@ -370,6 +371,7 @@
       "status": "Status",
       "started": "Started",
       "expires": "Expires",
+      "created": "Created",
       "actions": "Actions",
       "cancel": "Cancel",
       "empty": "No subscription records",
@@ -379,7 +381,10 @@
       "cancelled": "Cancelled",
       "pending": "Pending",
       "expired": "Expired",
-      "cancelsAt": "Cancels "
+      "cancelsAt": "Cancels ",
+      "upgrade": "Upgraded",
+      "downgrade": "Downgraded",
+      "new": "New"
     }
   }
 }

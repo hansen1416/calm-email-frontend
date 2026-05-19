@@ -139,9 +139,16 @@
       </template>
 
       <el-table :data="orders" v-loading="ordersLoading" stripe>
-        <el-table-column :label="$t('emailSenders.orders.plan')" width="100">
+        <el-table-column :label="$t('emailSenders.orders.plan')" width="140">
           <template #default="{ row }">
-            <el-tag size="small" type="info">{{ row.plan_name || '-' }}</el-tag>
+            <div style="display:flex;align-items:center;gap:4px">
+              <el-tag size="small" :type="row.change_type === 'upgrade' ? 'success' : row.change_type === 'downgrade' ? 'warning' : 'info'">
+                {{ row.plan_name || '-' }}
+              </el-tag>
+              <span v-if="row.previous_plan" style="font-size:11px;color:#999">
+                {{ row.change_type === 'upgrade' ? '↑' : '↓' }} {{ row.previous_plan }}
+              </span>
+            </div>
           </template>
         </el-table-column>
         <el-table-column :label="$t('emailSenders.orders.amount')" width="140">
@@ -183,6 +190,11 @@
         <el-table-column :label="$t('emailSenders.orders.expires')" width="120">
           <template #default="{ row }">
             {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString('en-GB') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('emailSenders.orders.created')" width="160">
+          <template #default="{ row }">
+            {{ row.created_at ? new Date(row.created_at).toLocaleString('en-GB') : '-' }}
           </template>
         </el-table-column>
         <el-table-column :label="$t('emailSenders.orders.actions')" width="150" fixed="right">
@@ -332,7 +344,7 @@
           @click="handleCheckout"
           :loading="upgrading"
         >
-          Subscribe {{ selectedPlan.name }} - {{ selectedPlan.price_monthly_display }}/mo
+          {{ hasActiveSubscription ? $t('emailSenders.pricing.switchTo', { plan: selectedPlan.name }) : `${$t('emailSenders.pricing.subscribeBtn')} ${selectedPlan.name} - ${selectedPlan.price_monthly_display}/mo` }}
         </el-button>
       </template>
     </el-dialog>
@@ -356,6 +368,7 @@ const plans = ref([])
 const currentPlan = ref('Free')
 const selectedPlan = ref(null)  // 用户手动选择的套餐（不等于当前订阅）
 const upgrading = ref(false)
+const hasActiveSubscription = ref(false)
 
 // 订单记录
 const orders = ref([])
@@ -625,8 +638,10 @@ const fetchPlans = async () => {
     }
     if (subRes.data?.active) {
       currentPlan.value = subRes.data.plan || 'Free'
+      hasActiveSubscription.value = true
     } else {
       currentPlan.value = 'Free'
+      hasActiveSubscription.value = false
     }
 
     // plans 加载完成后自动匹配当前套餐为选中
@@ -676,7 +691,7 @@ const selectPlan = (plan) => {
 const handleCheckout = async () => {
   const plan = selectedPlan.value
   if (!plan || !plan.price_monthly) {
-    ElMessage.warning('Please select a paid plan to subscribe')
+    ElMessage.warning('Please select a paid plan')
     return
   }
   if (currentPlan.value === plan.name) {
@@ -684,6 +699,44 @@ const handleCheckout = async () => {
     return
   }
 
+  const isSwitch = hasActiveSubscription.value && currentPlan.value !== 'Free'
+
+  // 换套餐确认框
+  if (isSwitch) {
+    const oldLimit = plans.value.find(p => p.name === currentPlan.value)?.daily_limit || 0
+    const isUpgrade = plan.daily_limit > oldLimit
+    try {
+      await ElMessageBox.confirm(
+        isUpgrade
+          ? `Switch from ${currentPlan.value} to ${plan.name}? Prorated charges will apply.`
+          : `Downgrade from ${currentPlan.value} to ${plan.name}? Your new plan will take effect at the end of the billing period.`,
+        isUpgrade ? 'Upgrade Plan' : 'Downgrade Plan',
+        { type: isUpgrade ? 'success' : 'warning', confirmButtonText: 'Confirm' }
+      )
+    } catch {
+      return
+    }
+    // 调用转套餐 API
+    upgrading.value = true
+    try {
+      const res = await request.post('/payment/switch-plan', {
+        quota_config_id: plan.id,
+      })
+      ElMessage.success(res.data.msg || 'Plan switched')
+      currentPlan.value = plan.name
+      pricingDialogVisible.value = false
+      fetchOrders()
+      fetchData()
+    } catch (error) {
+      console.error('Failed to switch plan:', error)
+      ElMessage.error(error.response?.data?.msg || 'Switch failed')
+    } finally {
+      upgrading.value = false
+    }
+    return
+  }
+
+  // 首次订阅（走 Stripe Checkout）
   try {
     await ElMessageBox.confirm(
       `Subscribe to ${plan.name} plan at ${plan.price_monthly_display}/month?`,

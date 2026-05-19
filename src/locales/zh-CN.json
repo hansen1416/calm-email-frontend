@@ -354,6 +354,7 @@
       "currentPlanBtn": "当前",
       "freePlan": "免费套餐",
       "subscribeBtn": "立即订阅",
+      "switchTo": "换到 {plan}",
       "notEnabled": "支付功能未启用。请在 .env 中设置 UPGRADE_FEATURE_ENABLED=true 和 PAYMENT_STRIPE_ENABLED=true",
       "loading": "正在加载套餐..."
     },
@@ -367,6 +368,7 @@
       "status": "状态",
       "started": "开始时间",
       "expires": "到期时间",
+      "created": "创建时间",
       "actions": "操作",
       "cancel": "取消订阅",
       "empty": "暂无订阅记录",
@@ -376,7 +378,10 @@
       "cancelled": "已取消",
       "pending": "待支付",
       "expired": "已过期",
-      "cancelsAt": "到期取消 "
+      "cancelsAt": "到期取消 ",
+      "upgrade": "已升级",
+      "downgrade": "已降级",
+      "new": "新购"
     }
   }
 }
