@@ -344,6 +344,42 @@
       "emailFormat": "Invalid email format",
       "codeRequired": "Please enter verification code",
       "codeLength": "Verification code must be 6 digits"
+    },
+    "pricing": {
+      "title": "Upgrade Plan",
+      "currentPlan": "Current Plan",
+      "emailsPerDay": "emails/day",
+      "month": "mo",
+      "year": "yr",
+      "save": "Save 17%",
+      "popular": "Popular",
+      "selectPlan": "Subscribe",
+      "currentPlanBtn": "Current",
+      "freePlan": "Free Plan",
+      "subscribeBtn": "Subscribe",
+      "notEnabled": "Payment feature is not enabled. Set UPGRADE_FEATURE_ENABLED=true and PAYMENT_STRIPE_ENABLED=true in .env",
+      "loading": "Loading plans..."
+    },
+    "orders": {
+      "title": "Subscription History",
+      "plan": "Plan",
+      "amount": "Amount",
+      "price": "Price",
+      "paidLabel": "Paid",
+      "trial": "Trial",
+      "status": "Status",
+      "started": "Started",
+      "expires": "Expires",
+      "actions": "Actions",
+      "cancel": "Cancel",
+      "empty": "No subscription records",
+      "sync": "Sync from Stripe",
+      "paid": "Active",
+      "cancelling": "Cancelling",
+      "cancelled": "Cancelled",
+      "pending": "Pending",
+      "expired": "Expired",
+      "cancelsAt": "Cancels "
     }
   }
 }

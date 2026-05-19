@@ -10,9 +10,19 @@
       <template #header>
         <div class="quota-header">
           <span>{{ $t('emailSenders.quota.title') }}</span>
-          <el-tag :type="quotaStatus.remaining > 20 ? 'success' : 'warning'">
-            {{ quotaStatus.remaining }}/{{ quotaStatus.daily_limit }}
-          </el-tag>
+          <div class="quota-header-right">
+            <el-tag :type="quotaStatus.remaining > 20 ? 'success' : 'warning'">
+              {{ quotaStatus.remaining }}/{{ quotaStatus.daily_limit }}
+            </el-tag>
+            <el-button
+              type="primary"
+              plain
+              size="small"
+              @click="showPricingDialog"
+            >
+              {{ currentPlan === 'Free' ? 'Upgrade' : 'Change Plan' }}
+            </el-button>
+          </div>
         </div>
       </template>
       <div class="quota-body">
@@ -117,6 +127,86 @@
       </el-empty>
     </el-card>
 
+    <!-- 订阅记录 -->
+    <el-card v-if="paymentEnabled" class="orders-card" shadow="never">
+      <template #header>
+        <div class="card-header">
+          <span>{{ $t('emailSenders.orders.title') }}</span>
+          <el-button size="small" text @click="syncSubscriptions" :loading="syncing">
+            {{ $t('emailSenders.orders.sync') }}
+          </el-button>
+        </div>
+      </template>
+
+      <el-table :data="orders" v-loading="ordersLoading" stripe>
+        <el-table-column :label="$t('emailSenders.orders.plan')" width="100">
+          <template #default="{ row }">
+            <el-tag size="small" type="info">{{ row.plan_name || '-' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('emailSenders.orders.amount')" width="140">
+          <template #default="{ row }">
+            <div v-if="row.plan_price">
+              <span style="font-size:12px;color:#999">{{ $t('emailSenders.orders.price') }}: </span>
+              <span>&pound;{{ row.plan_price.toFixed(2) }}</span>
+            </div>
+            <div v-if="row.amount_paid">
+              <span style="font-size:12px;color:#999">{{ $t('emailSenders.orders.paidLabel') }}: </span>
+              <span style="font-weight:bold">&pound;{{ row.amount_paid.toFixed(2) }}</span>
+            </div>
+            <div v-if="!row.plan_price && !row.amount_paid">-</div>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('emailSenders.orders.trial')" width="130">
+          <template #default="{ row }">
+            <template v-if="row.trial_remaining_days > 0">
+              <el-tag type="warning" size="small">{{ row.trial_remaining_days }}d left</el-tag>
+            </template>
+            <template v-else-if="row.trial_end">
+              <span style="color:#999;font-size:12px">Ended</span>
+            </template>
+            <span v-else>-</span>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('emailSenders.orders.status')" width="100">
+          <template #default="{ row }">
+            <el-tag :type="orderStatusType(row.status)">
+              {{ $t(`emailSenders.orders.${row.status}`) || row.status }}
+            </el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('emailSenders.orders.started')" width="120">
+          <template #default="{ row }">
+            {{ row.started_at ? new Date(row.started_at).toLocaleDateString('en-GB') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('emailSenders.orders.expires')" width="120">
+          <template #default="{ row }">
+            {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString('en-GB') : '-' }}
+          </template>
+        </el-table-column>
+        <el-table-column :label="$t('emailSenders.orders.actions')" width="150" fixed="right">
+          <template #default="{ row }">
+            <el-button
+              v-if="row.status === 'paid'"
+              type="danger"
+              size="small"
+              :loading="cancellingOrderId === row.id"
+              @click="cancelSubscription(row)"
+            >
+              {{ $t('emailSenders.orders.cancel') }}
+            </el-button>
+            <span v-else-if="row.status === 'cancelling'" style="color:#E6A23C;font-size:12px">
+              {{ $t('emailSenders.orders.cancelsAt') }} {{ row.expires_at ? new Date(row.expires_at).toLocaleDateString('en-GB') : '' }}
+            </span>
+            <span v-else-if="row.status === 'cancelled'" style="color:#999;font-size:12px">-</span>
+          </template>
+        </el-table-column>
+      </el-table>
+
+      <el-empty v-if="!ordersLoading && orders.length === 0" :description="$t('emailSenders.orders.empty')" />
+    </el-card>
+
     <!-- 添加邮箱对话框 -->
     <el-dialog v-model="addDialogVisible" :title="$t('emailSenders.addDialog.title')" width="500px">
       <el-form :model="addForm" :rules="addRules" ref="addFormRef">
@@ -181,11 +271,76 @@
         </el-button>
       </template>
     </el-dialog>
+
+    <!-- 套餐升级对话框 -->
+    <el-dialog v-model="pricingDialogVisible" :title="$t('emailSenders.pricing.title')" width="900px">
+      <!-- 支付功能未启用 -->
+      <template v-if="!paymentEnabled">
+        <el-empty :description="$t('emailSenders.pricing.notEnabled') || 'Payment feature is not enabled. Set UPGRADE_FEATURE_ENABLED=true in .env'" />
+      </template>
+      <template v-else-if="plans.length === 0">
+        <el-empty :description="$t('emailSenders.pricing.loading') || 'Loading plans...'" />
+      </template>
+      <template v-else>
+        <!-- 当前套餐提示 -->
+        <el-alert
+          v-if="currentPlan"
+          :title="`${$t('emailSenders.pricing.currentPlan')}: ${currentPlan}`"
+          type="info"
+          :closable="false"
+          show-icon
+          style="margin-bottom: 16px"
+        />
+        <div class="pricing-grid">
+          <el-card
+            v-for="p in plans"
+            :key="p.id"
+            :class="['plan-card', {
+              active: selectedPlan && (selectedPlan.id === p.id) || currentPlan === p.name,
+              recommended: p.name === 'Growth'
+            }]"
+            shadow="hover"
+            @click="selectPlan(p)"
+          >
+            <template v-if="p.name === 'Growth'">
+              <div class="plan-badge">{{ $t('emailSenders.pricing.popular') }}</div>
+            </template>
+            <h3 class="plan-name">{{ p.name }}</h3>
+            <p class="plan-limit">{{ p.daily_limit }} {{ $t('emailSenders.pricing.emailsPerDay') }}</p>
+            <p class="plan-desc">{{ p.description }}</p>
+            <div class="plan-prices">
+              <div class="plan-price">
+                <span class="price-value">{{ p.price_monthly_display }}</span>
+                <span class="price-unit">/{{ $t('emailSenders.pricing.month') }}</span>
+              </div>
+              <div v-if="p.price_yearly_display" class="plan-price-yearly">
+                {{ p.price_yearly_display }}/{{ $t('emailSenders.pricing.year') }}
+                <el-tag size="small" type="success" effect="plain">{{ $t('emailSenders.pricing.save') }}</el-tag>
+              </div>
+            </div>
+            <div style="margin-top: 12px; min-height: 32px">
+              <span v-if="currentPlan === p.name" class="current-tag">{{ $t('emailSenders.pricing.currentPlanBtn') }}</span>
+            </div>
+          </el-card>
+        </div>
+      </template>
+      <template #footer>
+        <el-button @click="pricingDialogVisible = false">{{ $t('common.cancel') }}</el-button>
+        <el-button
+          v-if="paymentEnabled && selectedPlan && selectedPlan.price_monthly && currentPlan !== selectedPlan.name"
+          type="primary"
+          @click="handleCheckout"
+          :loading="upgrading"
+        >
+          Subscribe {{ selectedPlan.name }} - {{ selectedPlan.price_monthly_display }}/mo
+        </el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { Plus } from '@element-plus/icons-vue'
 import request from '@/utils/request'
@@ -193,6 +348,20 @@ import request from '@/utils/request'
 const loading = ref(false)
 const senders = ref([])
 const quotaStatus = ref(null)
+
+// 支付相关
+const pricingDialogVisible = ref(false)
+const paymentEnabled = ref(false)
+const plans = ref([])
+const currentPlan = ref('Free')
+const selectedPlan = ref(null)  // 用户手动选择的套餐（不等于当前订阅）
+const upgrading = ref(false)
+
+// 订单记录
+const orders = ref([])
+const ordersLoading = ref(false)
+const cancellingOrderId = ref(null)
+const syncing = ref(false)
 
 // 添加对话框
 const addDialogVisible = ref(false)
@@ -439,7 +608,169 @@ const deleteSender = async (sender) => {
 
 onMounted(() => {
   fetchData()
+  fetchPlans()
+  fetchOrders()
 })
+
+// 获取套餐列表和当前订阅
+const fetchPlans = async () => {
+  try {
+    const [configsRes, subRes] = await Promise.all([
+      request.get('/payment/quota-configs'),
+      request.get('/payment/my-subscription'),
+    ])
+    if (configsRes.data?.enabled) {
+      paymentEnabled.value = true
+      plans.value = configsRes.data.configs || []
+    }
+    if (subRes.data?.active) {
+      currentPlan.value = subRes.data.plan || 'Free'
+    } else {
+      currentPlan.value = 'Free'
+    }
+
+    // plans 加载完成后自动匹配当前套餐为选中
+    if (plans.value.length > 0) {
+      const matched = plans.value.find(p => p.name === currentPlan.value)
+      selectedPlan.value = matched || plans.value[0]
+    }
+  } catch (error) {
+    console.error('Failed to fetch plans:', error)
+    paymentEnabled.value = false
+  }
+}
+
+const showPricingDialog = () => {
+  fetchPlans()
+  pricingDialogVisible.value = true
+  // 默认高亮当前订阅的套餐
+  selectedPlan.value = null  // 稍后在 watch plans 中匹配
+}
+
+// 检测 Stripe Checkout 回调
+const checkStripeReturn = () => {
+  const params = new URLSearchParams(window.location.hash.substring(window.location.hash.indexOf('?')))
+  const status = params.get('status')
+  if (status === 'success') {
+    ElMessage.success('Payment successful! Your plan has been upgraded.')
+    // 清除 URL 参数
+    const url = new URL(window.location.href)
+    url.hash = url.hash.split('?')[0] || '/'
+    window.history.replaceState({}, '', url.toString())
+  } else if (status === 'cancelled') {
+    ElMessage.info('Payment was cancelled.')
+    const url = new URL(window.location.href)
+    url.hash = url.hash.split('?')[0] || '/'
+    window.history.replaceState({}, '', url.toString())
+  }
+}
+
+const selectPlan = (plan) => {
+  // 点击卡片切换高亮选中状态
+  selectedPlan.value = plan
+
+  // Free 套餐：已经是当前套餐则无需操作
+  if (!plan.price_monthly && currentPlan.value === 'Free') return
+}
+
+const handleCheckout = async () => {
+  const plan = selectedPlan.value
+  if (!plan || !plan.price_monthly) {
+    ElMessage.warning('Please select a paid plan to subscribe')
+    return
+  }
+  if (currentPlan.value === plan.name) {
+    ElMessage.info('This is your current plan')
+    return
+  }
+
+  try {
+    await ElMessageBox.confirm(
+      `Subscribe to ${plan.name} plan at ${plan.price_monthly_display}/month?`,
+      'Confirm Subscription',
+      { type: 'info' }
+    )
+  } catch {
+    return
+  }
+
+  upgrading.value = true
+  try {
+    const res = await request.post('/payment/create-order', {
+      quota_config_id: plan.id,
+      payment_method: 'stripe',
+      billing_cycle: 'monthly',
+    })
+    currentPlan.value = plan.name
+    window.location.href = res.data.checkout_url
+  } catch (error) {
+    console.error('Failed to create order:', error)
+    ElMessage.error(error.response?.data?.msg || 'Payment initiation failed')
+  } finally {
+    upgrading.value = false
+  }
+}
+
+const fetchOrders = async () => {
+  ordersLoading.value = true
+  try {
+    const res = await request.get('/payment/orders')
+    if (res.data?.enabled) {
+      orders.value = res.data.orders || []
+    }
+  } catch (error) {
+    console.error('Failed to fetch orders:', error)
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
+const orderStatusType = (status) => {
+  return { paid: 'success', cancelling: 'warning', cancelled: 'info', pending: 'warning', expired: 'danger' }[status] || 'info'
+}
+
+const cancelSubscription = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      'Are you sure you want to cancel your subscription? Your plan will remain active until the end of the billing period.',
+      'Cancel Subscription',
+      { type: 'warning', confirmButtonText: 'Confirm' }
+    )
+  } catch {
+    return
+  }
+
+  cancellingOrderId.value = row.id
+  try {
+    const res = await request.post('/payment/cancel-subscription', {
+      subscription_id: row.payment_order_id,
+    })
+    ElMessage.success(res.data.msg || 'Subscription cancelled')
+    fetchOrders()  // 刷新列表
+    fetchData()    // 刷新配额
+  } catch (error) {
+    console.error('Failed to cancel subscription:', error)
+    ElMessage.error(error.response?.data?.msg || 'Cancellation failed')
+  } finally {
+    cancellingOrderId.value = null
+  }
+}
+
+const syncSubscriptions = async () => {
+  syncing.value = true
+  try {
+    const res = await request.post('/payment/sync-subscriptions')
+    ElMessage.success(res.data.msg || 'Sync complete')
+    fetchOrders()
+    fetchPlans()
+    fetchData()
+  } catch (error) {
+    console.error('Failed to sync:', error)
+    ElMessage.error(error.response?.data?.msg || 'Sync failed')
+  } finally {
+    syncing.value = false
+  }
+}
 </script>
 
 <style scoped lang="scss">
@@ -537,9 +868,115 @@ onMounted(() => {
     font-size: 14px;
   }
 
-  .mt-2 {
+.mt-2 {
     margin-top: 8px;
   }
+}
+
+.pricing-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+}
+
+.plan-card {
+  text-align: center;
+  position: relative;
+  border: 2px solid #ebeef5;
+  transition: all 0.3s;
+  overflow: visible;  /* 允许 badge 超出卡片边界 */
+
+  &:hover {
+    border-color: #409EFF;
+  }
+
+  &.recommended {
+    /* border-color removed - badge is sufficient */
+  }
+
+  &.active {
+    border-color: #67C23A;
+    background-color: #f0f9eb;
+    box-shadow: 0 0 0 1px #67C23A;
+
+    .plan-name {
+      color: #67C23A;
+    }
+  }
+
+  .plan-badge {
+    position: absolute;
+    top: -14px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #409EFF;
+    color: white;
+    padding: 2px 16px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    z-index: 10;
+  }
+
+  .plan-name {
+    font-size: 18px;
+    margin: 8px 0 4px;
+  }
+
+  .plan-limit {
+    font-size: 28px;
+    font-weight: bold;
+    color: #409EFF;
+    margin: 8px 0;
+  }
+
+  .plan-desc {
+    color: #666;
+    font-size: 13px;
+    min-height: 36px;
+  }
+
+  .plan-prices {
+    margin: 12px 0;
+  }
+
+  .plan-price {
+    .price-value {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+    }
+    .price-unit {
+      color: #999;
+      font-size: 14px;
+    }
+  }
+
+  .plan-price-yearly {
+    color: #666;
+    font-size: 13px;
+    margin-top: 4px;
+  }
+}
+
+.quota-header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.orders-card {
+  margin-top: 20px;
+}
+
+.current-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  background: #67C23A;
+  color: white;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: bold;
 }
 }
 </style>

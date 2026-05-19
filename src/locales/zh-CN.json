@@ -94,14 +94,20 @@
     "title": "发送邮件",
     "description": "选择模板和收件人，一键发送",
     "selectTemplate": "选择邮件模板",
+    "selectSender": "选择发件人",
     "selectContacts": "选择联系人",
     "selectGroups": "选择用户组",
     "sendButton": "发送邮件",
     "sending": "发送中...",
     "results": "发送结果",
     "selectTemplateMsg": "请选择邮件模板",
+    "selectSenderMsg": "请选择发件邮箱",
     "selectRecipientMsg": "请至少选择一个联系人或用户组",
-    "completed": "发送完成"
+    "completed": "发送完成",
+    "noSenders": "暂无发件邮箱",
+    "addSender": "添加发件人",
+    "defaultSender": "默认",
+    "quotaHint": "今日配额"
   },
   "workflow": {
     "title": "节点发送",
@@ -278,63 +284,99 @@
       "completed": "已完成",
       "failed": "失败",
       "cancelled": "已取消"
+    }
+  },
+  "emailSenders": {
+    "title": "发件邮箱管理",
+    "description": "管理您的发件邮箱，支持绑定自己的邮箱或使用系统邮箱",
+    "quota": {
+      "title": "今日发送配额",
+      "sent": "已发送",
+      "remaining": "剩余",
+      "resetAt": "重置时间"
     },
-    "emailSenders": {
-      "title": "发件邮箱管理",
-      "description": "管理您的发件邮箱，支持绑定自己的邮箱或使用系统邮箱",
-      "quota": {
-        "title": "今日发送配额",
-        "sent": "已发送",
-        "remaining": "剩余",
-        "resetAt": "重置时间"
-      },
-      "list": {
-        "title": "发件邮箱列表",
-        "add": "添加邮箱"
-      },
-      "table": {
-        "email": "邮箱地址",
-        "type": "类型",
-        "status": "状态",
-        "usage": "使用量",
-        "actions": "操作",
-        "default": "默认"
-      },
-      "type": {
-        "personal": "个人",
-        "system": "系统"
-      },
-      "status": {
-        "pending": "待验证",
-        "verified": "已验证",
-        "failed": "失败"
-      },
-      "actions": {
-        "verify": "验证",
-        "setDefault": "设为默认",
-        "delete": "删除"
-      },
-      "empty": "暂无发件邮箱，点击下方按钮添加",
-      "addDialog": {
-        "title": "添加发件邮箱",
-        "email": "邮箱地址"
-      },
-      "verifyDialog": {
-        "title": "验证邮箱",
-        "sentTo": "验证码已发送至",
-        "hint": "请输入邮箱中收到的6位验证码",
-        "code": "验证码",
-        "resend": "重新发送",
-        "sending": "正在发送验证码...",
-        "sentSuccess": "验证码已发送，请查收邮件",
-        "sentFailed": "验证码发送失败，请重试"
-      },
-      "rules": {
-        "emailRequired": "请输入邮箱地址",
-        "emailFormat": "邮箱格式不正确",
-        "codeRequired": "请输入验证码",
-        "codeLength": "验证码为6位数字"
-      }
+    "list": {
+      "title": "发件邮箱列表",
+      "add": "添加邮箱"
+    },
+    "table": {
+      "email": "邮箱地址",
+      "type": "类型",
+      "status": "状态",
+      "usage": "使用量",
+      "actions": "操作",
+      "default": "默认"
+    },
+    "type": {
+      "personal": "个人",
+      "system": "系统"
+    },
+    "status": {
+      "pending": "待验证",
+      "verified": "已验证",
+      "failed": "失败"
+    },
+    "actions": {
+      "verify": "验证",
+      "setDefault": "设为默认",
+      "delete": "删除"
+    },
+    "empty": "暂无发件邮箱，点击下方按钮添加",
+    "addDialog": {
+      "title": "添加发件邮箱",
+      "email": "邮箱地址"
+    },
+    "verifyDialog": {
+      "title": "验证邮箱",
+      "sentTo": "验证码已发送至",
+      "hint": "请输入邮箱中收到的6位验证码",
+      "code": "验证码",
+      "resend": "重新发送",
+      "sending": "正在发送验证码...",
+      "sentSuccess": "验证码已发送，请查收邮件",
+      "sentFailed": "验证码发送失败，请重试"
+    },
+    "rules": {
+      "emailRequired": "请输入邮箱地址",
+      "emailFormat": "邮箱格式不正确",
+      "codeRequired": "请输入验证码",
+      "codeLength": "验证码为6位数字"
+    },
+    "pricing": {
+      "title": "升级套餐",
+      "currentPlan": "当前套餐",
+      "emailsPerDay": "封/天",
+      "month": "月",
+      "year": "年",
+      "save": "省17%",
+      "popular": "推荐",
+      "selectPlan": "立即订阅",
+      "currentPlanBtn": "当前",
+      "freePlan": "免费套餐",
+      "subscribeBtn": "立即订阅",
+      "notEnabled": "支付功能未启用。请在 .env 中设置 UPGRADE_FEATURE_ENABLED=true 和 PAYMENT_STRIPE_ENABLED=true",
+      "loading": "正在加载套餐..."
+    },
+    "orders": {
+      "title": "订阅记录",
+      "plan": "套餐",
+      "amount": "金额",
+      "price": "定价",
+      "paidLabel": "实付",
+      "trial": "试用期",
+      "status": "状态",
+      "started": "开始时间",
+      "expires": "到期时间",
+      "actions": "操作",
+      "cancel": "取消订阅",
+      "empty": "暂无订阅记录",
+      "sync": "从 Stripe 同步",
+      "paid": "有效",
+      "cancelling": "取消中",
+      "cancelled": "已取消",
+      "pending": "待支付",
+      "expired": "已过期",
+      "cancelsAt": "到期取消 "
     }
   }
 }
