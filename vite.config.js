@@ -17,13 +17,17 @@ export default defineConfig({
   },
   server: {
     host: '0.0.0.0', // 监听所有IP地址
-    port: 8890,      // 指定端口号
+    port: 5173,      // 指定端口号
     proxy: {
       '/api': {
-        target: 'http://127.0.0.1:8880',
+        target: 'http://192.168.123.130:8880',
         changeOrigin: true,
         secure: false,
         ws: true
+      },
+      '/static': {
+        target: 'http://192.168.123.130:8880',
+        changeOrigin: true
       }
     }
   }

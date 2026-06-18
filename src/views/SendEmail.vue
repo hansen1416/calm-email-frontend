@@ -59,6 +59,13 @@
         </el-select>
       </div>
 
+      <div class="send-section">
+        <label>{{ $t('sendEmail.selectSegments') }}</label>
+        <el-select v-model="form.segment_ids" multiple :placeholder="$t('sendEmail.selectSegments') + ' (multiple)'" style="width:100%" size="large">
+          <el-option v-for="s in segments" :key="s.id" :label="`${s.name}`" :value="s.id" />
+        </el-select>
+      </div>
+
       <button class="btn-send" @click="handleSend" :disabled="sending">
         {{ sending ? $t('sendEmail.sending') : $t('sendEmail.sendButton') }}
       </button>
@@ -92,6 +99,7 @@ const router = useRouter()
 const templates = ref([])
 const contacts = ref([])
 const groups = ref([])
+const segments = ref([])
 const senders = ref([])  // M7: 发件人列表
 const quotaInfo = ref(null)  // M7: 配额信息
 const sending = ref(false)
@@ -100,20 +108,23 @@ const form = ref({
   template_id: null, 
   contact_ids: [], 
   group_ids: [],
+  segment_ids: [],
   sender_binding_id: null  // M7: 选中的发件人
 })
 
 async function loadData() {
   // M7: 同时加载发件人列表
-  const [t, c, g, s] = await Promise.all([
+  const [t, c, g, seg, s] = await Promise.all([
     request.get('/templates'),
     request.get('/contacts'),
     request.get('/groups'),
+    request.get('/segments'),
     request.get('/email/senders')
   ])
   templates.value = t.data
   contacts.value = c.data
   groups.value = g.data
+  segments.value = seg.data
   senders.value = s.data.senders || []
   
   // M7: 加载配额信息
@@ -127,15 +138,14 @@ async function loadData() {
 
 // M7: 跳转至发件人管理
 function goToSenders() {
-  router.push('/email-senders')
+  router.push('/settings')
 }
 
 async function handleSend() {
   if (!form.value.template_id) { ElMessage.warning(t('sendEmail.selectTemplateMsg')); return }
-  if (!form.value.contact_ids.length && !form.value.group_ids.length) {
+    if (!form.value.contact_ids.length && !form.value.group_ids.length && !form.value.segment_ids.length) {
     ElMessage.warning(t('sendEmail.selectRecipientMsg')); return
   }
-  sending.value = true
   try {
     const { data } = await request.post('/email/send', form.value)
     results.value = data.results

@@ -79,6 +79,7 @@
             <el-dropdown-menu>
               <el-dropdown-item command="email">{{ $t('workflow.addEmailNode') }}</el-dropdown-item>
               <el-dropdown-item command="driver">{{ $t('workflow.addDriverNode') }}</el-dropdown-item>
+              <el-dropdown-item command="call_task">📞 {{ $t('workflow.addManualTaskNode') }}</el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -135,7 +136,9 @@
                 @click="nodeForm.recipientType = 'contact'">{{ $t('workflow.contact') }}</button>
               <button :class="['type-btn', nodeForm.recipientType === 'group' ? 'active' : '']"
                 @click="nodeForm.recipientType = 'group'">{{ $t('workflow.group') }}</button>
-            </div>
+              <button :class="['type-btn', nodeForm.recipientType === 'segment' ? 'active' : '']"
+                @click="nodeForm.recipientType = 'segment'">{{ $t('workflow.segment') }}</button>
+          </div>
           </div>
           <div v-if="nodeForm.recipientType === 'contact'" class="field">
             <label>{{ $t('workflow.selectContact') }}</label>
@@ -147,6 +150,12 @@
             <label>{{ $t('workflow.selectGroup') }}</label>
             <el-select v-model="nodeForm.group_ids" multiple :placeholder="$t('workflow.selectGroup')" style="width:100%">
               <el-option v-for="g in groups" :key="g.id" :label="`${g.name} (${g.contact_count}${t('groups.people')})`" :value="g.id" />
+            </el-select>
+          </div>
+          <div v-if="nodeForm.recipientType === 'segment'" class="field">
+            <label>{{ $t('workflow.selectSegment') }}</label>
+            <el-select v-model="nodeForm.segment_ids" multiple :placeholder="$t('workflow.selectSegment')" style="width:100%">
+              <el-option v-for="s in segmentsList" :key="s.id" :label="s.name" :value="s.id" />
             </el-select>
           </div>
         </template>
@@ -258,6 +267,13 @@
             </div>
           </div>
         </template>
+        <!-- 人工任务节点配置 -->
+        <template v-if="selectedNodeType === 'call_task'">
+          <div class="field">
+            <label>任务内容</label>
+            <textarea v-model="nodeForm.task_content" placeholder="请输入人工任务的工作内容..." rows="4" style="width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;outline:none;background:#faf9f7;resize:vertical"></textarea>
+          </div>
+        </template>
       </div>
 
       <template #footer>
@@ -340,6 +356,7 @@ const $t = t
 const templates = ref([])
 const contacts = ref([])
 const groups = ref([])
+const segmentsList = ref([])
 const savedWorkflows = ref([])
 const workflowName = ref(t('workflow.unnamedWorkflow'))
 const currentWfId = ref(null)
@@ -364,6 +381,8 @@ const nodeForm = reactive({
   recipientType: 'contact',
   contact_ids: [],
   group_ids: [],
+  segment_ids: [],
+  task_content: '',  // 人工任务内容
   // 事件驱动节点 - 步骤配置
   steps: [
     { id: 'event', name: '监听事件', enabled: false, event_type: null, link_url: '' },
@@ -373,7 +392,6 @@ const nodeForm = reactive({
   stepOrder: ['event', 'condition', 'delay'],
   expandedStep: null
 })
-
 // 工作流列表项点击/双击处理
 let workflowClickTimer = null
 let lastClickedWf = null
@@ -489,6 +507,7 @@ const stepNames = computed(() => ({
 
 // 节点类型定义
 const nodeTypes = [
+  { value: 'call_task', icon: '📞', name: '人工任务', desc: '创建待办，人工完成后恢复流程', color: '#0d47a1' },
   { value: 'email', icon: '📧', name: '发送邮件', desc: '选择模板和收件人发送邮件', color: '#1a1a1a' },
   { value: 'driver', icon: '🔔', name: '事件驱动', desc: '监听邮件事件、判断条件、延迟执行', color: '#e65100' }
 ]
@@ -501,6 +520,7 @@ const dialogTitle = computed(() => {
 })
 
 const NODE_COLORS = {
+  call_task: { fill: '#e3f2fd', stroke: '#0d47a1', text: '#0d47a1' },
   email: { fill: '#fff', stroke: '#1a1a1a', text: '#1a1a1a' },
   driver: { fill: '#fff3e0', stroke: '#e65100', text: '#e65100' }
 }
@@ -832,14 +852,16 @@ function calculateNodePosition(anchorDirection = null) {
 
 // 加载基础数据
 async function loadData() {
-  const [t, c, g] = await Promise.all([
+  const [t, c, g, seg] = await Promise.all([
     request.get('/templates'),
     request.get('/contacts'),
-    request.get('/groups')
+    request.get('/groups'),
+    request.get('/segments')
   ])
   templates.value = t.data
   contacts.value = c.data
   groups.value = g.data
+  segmentsList.value = seg.data
 }
 
 // 加载已保存的工作流
@@ -997,6 +1019,9 @@ function handleAddNode(command) {
   } else if (command === 'driver') {
     selectedNodeType.value = 'driver'
     nodeTypeStep.value = 'select'
+  } else if (command === 'call_task') {
+    selectedNodeType.value = 'call_task'
+    nodeTypeStep.value = 'select'
   } else if (command) {
     selectedNodeType.value = command
     nodeTypeStep.value = 'select'
@@ -1033,7 +1058,8 @@ function openEditDialog(nodeData) {
   nodeForm.recipientType = nodeData.recipientType || 'contact'
   nodeForm.contact_ids = nodeData.contact_ids ? [...nodeData.contact_ids] : []
   nodeForm.group_ids = nodeData.group_ids ? [...nodeData.group_ids] : []
-
+  nodeForm.segment_ids = nodeData.segment_ids ? [...nodeData.segment_ids] : []
+  nodeForm.task_content = nodeData.task_content || ''
   if (nodeData.nodeType === 'driver') {
     if (nodeData.steps && Array.isArray(nodeData.steps) && nodeData.steps.length > 0) {
       nodeForm.steps = JSON.parse(JSON.stringify(nodeData.steps))
@@ -1103,6 +1129,8 @@ function resetNodeForm() {
   nodeForm.recipientType = 'contact'
   nodeForm.contact_ids = []
   nodeForm.group_ids = []
+  nodeForm.segment_ids = []
+  nodeForm.task_content = ''
   nodeForm.steps = [
     { id: 'event', name: stepNames.value.event, enabled: false, event_type: null, link_url: '' },
     { id: 'condition', name: stepNames.value.condition, enabled: false, field: null, operator: 'eq', value: '' },
@@ -1138,6 +1166,7 @@ async function confirmAddNode() {
           newData.recipientType = nodeForm.recipientType
           newData.contact_ids = [...nodeForm.contact_ids]
           newData.group_ids = [...nodeForm.group_ids]
+          newData.segment_ids = [...nodeForm.segment_ids]
           // email节点不需要steps
           delete newData.steps
           delete newData.stepOrder
@@ -1149,6 +1178,14 @@ async function confirmAddNode() {
           delete newData.recipientType
           delete newData.contact_ids
           delete newData.group_ids
+          delete newData.segment_ids
+        } else if (selectedNodeType.value === 'call_task') {
+          newData.task_content = nodeForm.task_content || ''
+          delete newData.template_id
+          delete newData.recipientType
+          delete newData.contact_ids
+          delete newData.group_ids
+          delete newData.segment_ids
         }
         cell.setData(newData, { overwrite: true })
       cell.setAttrs({
@@ -1177,10 +1214,19 @@ async function confirmAddNode() {
       ElMessage.warning(t('workflow.selectGroupMsg'))
       return
     }
+    if (nodeForm.recipientType === 'segment' && !nodeForm.segment_ids.length) {
+      ElMessage.warning(t('workflow.selectSegmentMsg'))
+      return
+    }
   } else if (selectedNodeType.value === 'driver') {
     const enabledSteps = nodeForm.steps.filter(s => s.enabled)
     if (enabledSteps.length === 0) {
       ElMessage.warning('请至少启用一个步骤')
+      return
+    }
+  } else if (selectedNodeType.value === 'call_task') {
+    if (!nodeForm.label) {
+      ElMessage.warning('请输入任务名称')
       return
     }
   }
@@ -1191,15 +1237,16 @@ async function confirmAddNode() {
 
     let nodeData = { id, nodeType: selectedNodeType.value, label: nodeForm.label }
     if (selectedNodeType.value === 'email') {
-      nodeData = { ...nodeData, template_id: nodeForm.template_id, recipientType: nodeForm.recipientType, contact_ids: [...nodeForm.contact_ids], group_ids: [...nodeForm.group_ids] }
+      nodeData = { ...nodeData, template_id: nodeForm.template_id, recipientType: nodeForm.recipientType, contact_ids: [...nodeForm.contact_ids], group_ids: [...nodeForm.group_ids], segment_ids: [...nodeForm.segment_ids] }
     } else if (selectedNodeType.value === 'driver') {
       nodeData = {
         ...nodeData,
         steps: JSON.parse(JSON.stringify(nodeForm.steps)),
         stepOrder: [...nodeForm.stepOrder]
       }
+    } else if (selectedNodeType.value === 'call_task') {
+      nodeData.task_content = nodeForm.task_content || ''
     }
-
   // 使用事件驱动类型节点（使用圆角菱形效果的矩形）
   const isDriverNode = selectedNodeType.value === 'driver'
   graph.addNode({
@@ -1983,7 +2030,7 @@ window.addEventListener('resize', () => {
 
 .workflow-list-item.active {
   background: rgba(26, 26, 26, 0.05);
-  border-color: var(--primary);
+  border-color: #7f4a89;
 }
 
 .workflow-info {

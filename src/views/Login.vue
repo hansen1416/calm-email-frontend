@@ -33,12 +33,13 @@
 
 <script setup>
 import { ref } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRouter, useRoute } from 'vue-router'
 import { useUserStore } from '@/stores/user'
 import { useI18n } from 'vue-i18n'
 import { ElMessage } from 'element-plus'
 
 const router = useRouter()
+const route = useRoute()
 const userStore = useUserStore()
 const { t } = useI18n()
 const $t = t
@@ -46,10 +47,15 @@ const $t = t
 const isRegister = ref(false)
 const form = ref({ username: '', password: '', email: '' })
 
+// 读取 ref 推荐码（从 URL query 获取）
+const refCode = route.query.ref || ''
+
 async function handleSubmit() {
   try {
     if (isRegister.value) {
-      await userStore.register(form.value)
+      const payload = { ...form.value }
+      if (refCode) payload.ref = refCode
+      await userStore.register(payload)
       ElMessage.success(t('common.register') + ' ' + t('common.success') + ', ' + t('common.login'))
       isRegister.value = false
     } else {

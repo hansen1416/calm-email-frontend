@@ -55,15 +55,15 @@ request.interceptors.response.use(
 
     // 401 未授权错误
     if (response?.status === 401) {
-      // 判断是否是刷新 Token 的请求
-      if (originalRequest.url === '/auth/refresh') {
-        // 刷新失败，需要重新登录
+      // 已重试过仍 401 → 登录过期，避免无限循环
+      if (originalRequest._retryCount) {
         localStorage.removeItem('token')
         localStorage.removeItem('refresh_token')
         ElMessage.error('登录已过期，请重新登录')
         router.push('/login')
         return Promise.reject(err)
       }
+
 
       // 尝试刷新 Token
       const refreshToken = localStorage.getItem('refresh_token')
@@ -85,7 +85,9 @@ request.interceptors.response.use(
           onTokenRefreshed(access_token)
           isRefreshing = false
           
-          // 重试原请求
+
+          // 标记已重试，防止无限循环
+          originalRequest._retryCount = 1
           originalRequest.headers.Authorization = `Bearer ${access_token}`
           return request(originalRequest)
         } catch (refreshErr) {
@@ -101,6 +103,12 @@ request.interceptors.response.use(
       // 正在刷新中，等待新 Token
       return new Promise(resolve => {
         subscribeTokenRefresh(newToken => {
+          if (originalRequest._retryCount) {
+            // 避免无限循环
+            resolve(Promise.reject(new Error('登录已过期')))
+            return
+          }
+          originalRequest._retryCount = 1
           originalRequest.headers.Authorization = `Bearer ${newToken}`
           resolve(request(originalRequest))
         })

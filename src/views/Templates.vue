@@ -28,7 +28,7 @@
       </div>
     </div>
 
-    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('templates.editTemplate') : $t('templates.addTemplate').replace('+ ', '')" width="700px">
+    <el-dialog v-model="dialogVisible" :title="isEdit ? $t('templates.editTemplate') : $t('templates.addTemplate').replace('+ ', '')" width="900px" top="5vh" destroy-on-close>
       <!-- Preset selector -->
       <div v-if="!isEdit" class="preset-section">
         <label class="section-label">{{ $t('templates.startFromPreset') }}</label>
@@ -49,12 +49,16 @@
         <div class="field"><label>{{ $t('templates.templateName') }}</label><input v-model="form.name" /></div>
         <div class="field"><label>{{ $t('templates.emailSubject') }}</label><input v-model="form.subject" /></div>
         <div class="field">
-          <label>{{ $t('templates.emailBody') }} <span class="hint">{{ $t('templates.htmlSupport') }}</span></label>
-          <textarea v-model="form.body" rows="12"></textarea>
+          <label>{{ $t('templates.emailBody') }}</label>
+          <BlockEditor ref="blockEditorRef" v-model="form.blocks" @update:html="form.body = $event" />
+        </div>
+        <div class="brand-synth-trigger">
+          <button class="btn-link" @click="brandVisible = true">{{ $t('templates.brandSynthesis') }}</button>
         </div>
         <div v-if="form.body" class="live-preview">
           <label class="section-label">{{ $t('templates.livePreview') }}</label>
           <div class="preview-frame" v-html="form.body"></div>
+          <p v-if="form.blocks?.blocks?.length" class="hint preview-hint">{{ $t('templates.blocksPreviewNote') }}</p>
         </div>
       </div>
       <template #footer>
@@ -67,6 +71,8 @@
       <div class="preview-subject">{{ previewData.subject }}</div>
       <div class="preview-body" v-html="previewData.body"></div>
     </el-dialog>
+
+    <BrandSynthesizer v-model="brandVisible" @insertImage="handleInsertImage" />
   </div>
 </template>
 
@@ -76,6 +82,8 @@ import { useI18n } from 'vue-i18n'
 import request from '@/utils/request'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { presetTemplates } from '@/utils/presetTemplates'
+import BlockEditor from '@/components/BlockEditor.vue'
+import BrandSynthesizer from '@/components/BrandSynthesizer.vue'
 
 const { t } = useI18n()
 const $t = t
@@ -93,10 +101,28 @@ const dialogVisible = ref(false)
 const previewVisible = ref(false)
 const isEdit = ref(false)
 const editId = ref(null)
-const form = ref({ name: '', subject: '', body: '' })
+const form = ref({ name: '', subject: '', body: '', blocks: null })
 const previewData = ref({ subject: '', body: '' })
 const presets = presetTemplates
 const selectedPreset = ref(-1)
+const brandVisible = ref(false)
+const blockEditorRef = ref(null)
+
+function handleInsertImage(url) {
+  // Vue 3.2+ defineExpose auto-unwraps ref, so editorInstance is the instance itself
+  const editor = blockEditorRef.value?.editorInstance
+  if (!editor) {
+    // Retry with .value for backward compatibility
+    const editorViaValue = blockEditorRef.value?.editorInstance?.value
+    if (editorViaValue) {
+      editorViaValue.blocks.insert('image', { url, caption: '' })
+      return ElMessage.success('品牌图片已插入邮件正文')
+    }
+    return ElMessage.error('编辑器未就绪')
+  }
+  editor.blocks.insert('image', { url, caption: '' })
+  ElMessage.success('品牌图片已插入邮件正文')
+}
 
 async function loadTemplates() {
   const { data } = await request.get('/templates')
@@ -106,20 +132,20 @@ function applyPreset(i) {
   selectedPreset.value = i
   const p = presets[i]
   const nameKey = p.key
-  form.value = { name: presetNames.value[nameKey], subject: p.subject, body: p.body }
+  form.value = { name: presetNames.value[nameKey], subject: p.subject, body: p.body, blocks: null }
 }
 function clearPreset() {
   selectedPreset.value = -1
-  form.value = { name: '', subject: '', body: '' }
+  form.value = { name: '', subject: '', body: '', blocks: null }
 }
 function openDialog(row) {
   selectedPreset.value = -1
   if (row) {
     isEdit.value = true; editId.value = row.id
-    form.value = { name: row.name, subject: row.subject, body: row.body }
+    form.value = { name: row.name, subject: row.subject, body: row.body, blocks: row.blocks || null }
   } else {
     isEdit.value = false; editId.value = null
-    form.value = { name: '', subject: '', body: '' }
+    form.value = { name: '', subject: '', body: '', blocks: null }
   }
   dialogVisible.value = true
 }
@@ -128,11 +154,16 @@ function preview(row) {
   previewVisible.value = true
 }
 async function handleSave() {
+  const payload = { ...form.value }
+  // serialize blocks to JSON if it's an EditorJS object
+  if (payload.blocks && payload.blocks.blocks) {
+    payload.blocks = JSON.parse(JSON.stringify(payload.blocks))
+  }
   if (isEdit.value) {
-    await request.put(`/templates/${editId.value}`, form.value)
+    await request.put(`/templates/${editId.value}`, payload)
     ElMessage.success(t('common.updateSuccess') || 'Updated successfully')
   } else {
-    await request.post('/templates', form.value)
+    await request.post('/templates', payload)
     ElMessage.success(t('common.add') + ' ' + t('common.success') || 'Added successfully')
   }
   dialogVisible.value = false; loadTemplates()
@@ -200,4 +231,23 @@ onMounted(loadTemplates)
   font-size: 14px; outline: none; background: #faf9f7; transition: border-color 0.2s; font-family: inherit;
 }
 .dialog-form input:focus, .dialog-form textarea:focus { border-color: var(--primary); }
+
+:deep(.el-dialog__footer) { display: flex; justify-content: flex-end; gap: 12px; }
+:deep(.el-dialog__footer) button { margin-left: 0; }
+</style>
+
+<style>
+.preview-frame h2 { font-size: 22px; font-weight: 700; margin: 16px 0 8px; color: #1a1a1a; }
+.preview-frame h3 { font-size: 18px; font-weight: 600; margin: 12px 0 6px; color: #333; }
+.preview-frame h4 { font-size: 16px; font-weight: 600; margin: 10px 0 4px; color: #444; }
+.preview-frame p { margin: 8px 0; line-height: 1.6; color: var(--text); }
+.preview-frame ol, .preview-frame ul { padding-left: 20px; margin: 8px 0; }
+.preview-frame li { margin: 4px 0; line-height: 1.5; }
+.preview-frame a { color: var(--primary); text-decoration: underline; }
+.preview-frame img { max-width: 100%; border-radius: 4px; }
+.preview-frame blockquote { margin: 12px 0; padding: 10px 16px; border-left: 4px solid var(--primary); background: #f8f7f5; color: #555; font-style: italic; border-radius: 0 6px 6px 0; }
+.preview-frame hr { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+.preview-frame table { border-collapse: collapse; width: 100%; margin: 8px 0; }
+.preview-frame td { border: 1px solid var(--border); padding: 6px 10px; font-size: 13px; }
+
 </style>

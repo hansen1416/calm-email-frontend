@@ -6,6 +6,10 @@ export const useUserStore = defineStore('user', () => {
   const token = ref(localStorage.getItem('token') || '')
   const refreshToken = ref(localStorage.getItem('refresh_token') || '')
   const username = ref('')
+  const avatar = ref('avatar-1')
+  const email = ref('')
+  const notifications = ref([])
+  const unreadCount = ref(0)
 
   async function login(form) {
     const { data } = await request.post('/auth/login', form)
@@ -33,10 +37,33 @@ export const useUserStore = defineStore('user', () => {
     localStorage.removeItem('refresh_token')
   }
 
-  function setToken(accessToken) {
-    token.value = accessToken
-    localStorage.setItem('token', accessToken)
+  async function fetchMe() {
+    try {
+      const { data } = await request.get('/auth/me')
+      username.value = data.username
+      avatar.value = data.avatar || 'avatar-1'
+      email.value = data.email || ''
+    } catch { /* ignore */ }
   }
 
-  return { token, refreshToken, username, login, register, logout, setToken }
+  async function updateProfile(payload) {
+    const { data } = await request.put('/auth/profile', payload)
+    avatar.value = data.avatar
+    email.value = data.email
+    return data
+  }
+
+  async function changePassword(oldPassword, newPassword) {
+    await request.put('/auth/change-password', { old_password: oldPassword, new_password: newPassword })
+  }
+
+  async function fetchNotifications() {
+    try {
+      const { data } = await request.get('/notifications')
+      notifications.value = data || []
+      unreadCount.value = data.filter(n => !n.is_read).length
+    } catch { /* ignore */ }
+  }
+
+  return { token, refreshToken, username, avatar, email, notifications, unreadCount, login, register, logout, fetchMe, updateProfile, changePassword, fetchNotifications }
 })
